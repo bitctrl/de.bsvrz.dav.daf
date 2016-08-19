@@ -27,10 +27,10 @@
  */
 package de.bsvrz.dav.daf.communication.dataRepresentation.data;
 
+import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1.ConcreteDataFactory;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.config.AttributeGroup;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1.ConcreteDataFactory;
 
 /**
  * Klasse, die zum Erzeugen von Datensätzen aus einem Byte-Array mit verschiedenen Serialisiererversionen verwendet werden kann.

@@ -35,7 +35,8 @@ import de.bsvrz.dav.daf.main.config.SystemObject;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Ergebnisdatensatz zum Zugriff auf ein empfangenes Datentelegramm und zum Erzeugen eines zu versendenden Datentelegramms. Neben den konkreten Attributwerten

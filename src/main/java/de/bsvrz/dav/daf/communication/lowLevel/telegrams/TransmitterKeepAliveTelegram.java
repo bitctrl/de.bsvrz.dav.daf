@@ -39,7 +39,9 @@ import java.io.IOException;
  *
  * @author Kappich Systemberatung
  * @version $Revision$
+ * @deprecated Auch zwischen 2 Datenverteilern werden aktuell normale {@link KeepAliveTelegram KeepAliveTelegramme} versendet
  */
+@Deprecated
 public class TransmitterKeepAliveTelegram extends DataTelegram {
 
 	public TransmitterKeepAliveTelegram() {

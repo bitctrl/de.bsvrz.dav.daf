@@ -27,7 +27,7 @@
 
 package de.bsvrz.dav.daf.main.config;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Diese Schnittstelle definiert Methoden, um auf Elemente von Zusammenstellungen von System-Objekten zugreifen zu können. Sie wird benutzt bei <ul> <li>{@link

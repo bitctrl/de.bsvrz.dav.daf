@@ -28,8 +28,8 @@ package de.bsvrz.dav.daf.communication.dataRepresentation.data.byteArray;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1.AbstractAttributeInfo;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1.ReferenceDefinitionInfo;
-import de.bsvrz.dav.daf.main.config.AttributeType;
 import de.bsvrz.dav.daf.main.Data;
+import de.bsvrz.dav.daf.main.config.AttributeType;
 import de.bsvrz.dav.daf.main.config.StringAttributeType;
 import de.bsvrz.dav.daf.main.config.UndefinedAttributeValueAccess;
 

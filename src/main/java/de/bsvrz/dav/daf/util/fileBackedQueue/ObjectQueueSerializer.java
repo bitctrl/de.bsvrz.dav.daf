@@ -26,12 +26,7 @@
 
 package de.bsvrz.dav.daf.util.fileBackedQueue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 
 /**
  * @author Kappich Systemberatung

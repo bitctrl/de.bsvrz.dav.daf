@@ -26,8 +26,8 @@
 package de.bsvrz.dav.daf.communication.dataRepresentation.data.info;
 
 import de.bsvrz.dav.daf.main.config.AttributeType;
-import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.config.IntegerValueState;
+import de.bsvrz.dav.daf.main.config.SystemObject;
 
 /**
  * Schnittstelle, die noch zu dokumentieren ist.

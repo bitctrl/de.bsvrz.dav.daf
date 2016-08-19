@@ -26,7 +26,7 @@
 
 package de.bsvrz.dav.daf.main.config;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Schnittstelle zum Zugriff auf die Eigenschaften von dynamischen Zusammenstellungen. Diese Schnittstelle wird von dynamischen Mengen und von dynamischen

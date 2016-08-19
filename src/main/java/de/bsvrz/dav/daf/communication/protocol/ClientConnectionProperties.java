@@ -62,16 +62,27 @@ public class ClientConnectionProperties extends ConnectionProperties {
 	/** Enthält den via Aufrufparameter von Start/Stopp vorgegebenen Inkarnationsnamen oder <code>""</code>, falls das Aufrufargument nicht angegeben wurde. */
 	private final String _incarnationName;
 
+	/**
+	 * Gibt zurück, ob es sich um die eigene Verbindung des Datenverteilers handelt
+	 */
+	private final boolean _selfClientDavConnection;
+
+	/**
+	 * Den Einmalpasswortindex oder -1 für kein Einmalpasswort
+	 */
+	private int _passwordIndex;
+
 	public ClientConnectionProperties(ClientDavParameters clientDavParameters) throws ConnectionException {
 		super(
 				null,
 				null,
 				clientDavParameters.getUserName(),
-				clientDavParameters.getUserPassword(),
 				clientDavParameters.getCommunicationParameters().getSendKeepAliveTimeout(),
 				clientDavParameters.getCommunicationParameters().getReceiveKeepAliveTimeout(),
 				clientDavParameters.getAdjustedOutputBufferSize(),
-				clientDavParameters.getAdjustedInputBufferSize()
+				clientDavParameters.getAdjustedInputBufferSize(),
+				clientDavParameters.isHmacAuthenticationAllowed(),
+				clientDavParameters.getEncryptionPreference()
 		);
 		try {
 			String comProtocol = clientDavParameters.getLowLevelCommunicationName();
@@ -112,6 +123,8 @@ public class ClientConnectionProperties extends ConnectionProperties {
 			_address = clientDavParameters.getDavCommunicationAddress();
 			_subAddress = clientDavParameters.getDavCommunicationSubAddress();
 			_communicationParameters = clientDavParameters.getCommunicationParameters();
+			_selfClientDavConnection = clientDavParameters.isSelfClientDavConnection();
+			_passwordIndex = clientDavParameters.getPasswordIndex();
 		}
 		catch(ClassNotFoundException ex) {
 			throw new InitialisationNotCompleteException("Fehler beim Erzeugen der logischen Verbindung zum Datenverteiler.", ex);
@@ -230,5 +243,29 @@ public class ClientConnectionProperties extends ConnectionProperties {
 	 */
 	public final void setCommunicationSubAddress(int subAddress) {
 		_subAddress = subAddress;
+	}
+
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn es sich um die lokale Verbindung des Datenverteilers handelt
+	 * @return <tt>true</tt>, wenn es sich um die lokale Verbindung des Datenverteilers handelt, sonst <tt>false</tt>
+	 */
+	public boolean isSelfClientDavConnection() {
+		return _selfClientDavConnection;
+	}
+
+	/** 
+	 * Gibt den Einmalpasswortindex oder -1 für kein Einmalpasswort zurück
+	 * @return den Einmalpasswortindex oder -1 für kein Einmalpasswort
+	 */
+	public int getPasswordIndex() {
+		return _passwordIndex;
+	}
+
+	/**
+	 * Setzt den passwortindex
+	 * @param passwordIndex Einmalpasswortindex oder -1 für kein Einmalpasswort
+	 */
+	public void setPasswordIndex(final int passwordIndex) {
+		_passwordIndex = passwordIndex;
 	}
 }

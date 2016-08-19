@@ -27,9 +27,9 @@
 
 package de.bsvrz.dav.daf.main.impl;
 
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
+import de.bsvrz.dav.daf.main.Data;
+import de.bsvrz.dav.daf.main.config.DataModel;
 
 /**
  * Eine Instanz dieser Klasse wird im {@link CacheManager} verwaltet und stellt einen gepufferten Datensatz dar.

@@ -27,10 +27,9 @@
 package de.bsvrz.dav.daf.main.impl.archive;
 
 
-
-import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.archive.ArchiveDataKind;
+import de.bsvrz.dav.daf.main.config.SystemObject;
 
 /**
  * Identifikation der Archivdaten eines Archivdatencontainers.

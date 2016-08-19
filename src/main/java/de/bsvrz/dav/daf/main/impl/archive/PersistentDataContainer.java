@@ -27,10 +27,10 @@
 package de.bsvrz.dav.daf.main.impl.archive;
 
 
-import java.io.IOException;
-
-import de.bsvrz.dav.daf.main.impl.archive.filesaver.BadVolumeException;
 import de.bsvrz.dav.daf.main.DataState;
+import de.bsvrz.dav.daf.main.impl.archive.filesaver.BadVolumeException;
+
+import java.io.IOException;
 
 /**
  * Schnittstelle mit der das Persistenzmodul die Grundfunktionalität eines Archivdatensatzcontainers zur Verfügung

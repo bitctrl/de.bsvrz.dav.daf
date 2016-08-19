@@ -28,11 +28,7 @@ package de.bsvrz.dav.daf.util.fileBackedQueue;
 
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 import java.util.NoSuchElementException;

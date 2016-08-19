@@ -32,7 +32,7 @@ import de.bsvrz.dav.daf.main.impl.archive.filesaver.BadVolumeException;
 import de.bsvrz.sys.funclib.commandLineArgs.ArgumentList;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
 
 /**
  * Ein Objekt, das dieses Interface implementiert, stellt einem Archivsystem das sogenannte "PersistenceModule" zur

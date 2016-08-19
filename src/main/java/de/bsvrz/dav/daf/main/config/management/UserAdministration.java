@@ -26,11 +26,16 @@
 
 package de.bsvrz.dav.daf.main.config.management;
 
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpClientAuthentication;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpNotSupportedException;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpVerifierAndUser;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpVerifierData;
 import de.bsvrz.dav.daf.main.DataAndATGUsageInformation;
 import de.bsvrz.dav.daf.main.config.ConfigurationTaskException;
 import de.bsvrz.dav.daf.main.config.MutableCollectionChangeListener;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
 
@@ -139,7 +144,7 @@ public interface UserAdministration {
 	 * Nur ein Benutzer mit den Rechten eines Administrators darf die Rechte anderer Benutzer ändern. Besitzt ein Benutzer diese Rechte nicht wird der Auftrag an
 	 * die Konfiguration verschickt und dort von der Konfiguration abgelehnt.
 	 *
-	 * @param orderer         Auftraggeber, der die Rechte eines Benuters ändern möchte.
+	 * @param orderer         Auftraggeber, der die Rechte eines Benutzers ändern möchte.
 	 * @param ordererPassword Passwort des Auftraggebers.
 	 * @param user            Benutzer, dessen Rechte geändert werden sollen.
 	 * @param adminRights     <code>true</code>, wenn der Benutzer, der mit <code>user</code> identifiziert wird, die Rechte eines Administrators erhalten soll;
@@ -170,6 +175,23 @@ public interface UserAdministration {
 	public void changeUserPassword(String orderer, String ordererPassword, String user, String newUserPassword) throws ConfigurationTaskException;
 
 	/**
+	 * Setzt den SRP-Überprüfungscode des angegebenen Benutzers. Diese Methode tut dasselbe wie {@link #changeUserPassword(String, String, String, String)},
+	 * mit dem Unterschied, das `changeUserPassword` den Überprüfungscode anhand des gegebenen Passworts berechnet, während diese Methode einen bereits irgendwo berechneten
+	 * Überprüfungscode an die Konfiguration überträgt
+	 *
+	 * @param orderer         Benutzername des Auftraggebers
+	 * @param ordererPassword Derzeit gültiges Passwort, falls der Benutzername <code>orderer</code> und <code>user</code> identisch sind. Sind die Parameter nicht
+	 *                        identisch, muss der Benutzer, der mit <code>orderer</code> identifiziert wird, die Rechte eines Administrators besitzen und sein
+	 *                        Passwort übergeben
+	 * @param user            Benutzername des Benutzerkontos, dessen Passwort geändert werden soll
+	 * @param verifier          neuer Überprüfungscode für den angegebenen Benutzer, wird vo nder Konfiguration zur Überprüfung des Passworts benutzt, ohne dass diese selbst das Passwort wissen muss
+	 * @throws ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen, weil die übergebenen Parameter falsch sind. So kann der Auftraggeber
+	 *                                    zum Beispiel nicht die nötigen Rechte besitzen das Passwort eines anderen Benutzers zu ändern oder das Passwort zum
+	 *                                    ändern ist falsch.
+	 */
+	public void setSrpVerifier(String orderer, String ordererPassword, String user, SrpVerifierData verifier) throws ConfigurationTaskException;
+
+	/**
 	 * Beauftragt die Konfiguration ein Einmal-Passwort zu erzeugen und es einem Benutzer zu zuordnen.
 	 * <p>
 	 * Damit dieser Auftrag ausgeführt werden kann, muss der Auftraggeber <code>orderer</code> die Rechte eines Administrators besitzen. Besitzt der Auftraggeber
@@ -182,7 +204,12 @@ public interface UserAdministration {
 	 *
 	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen, weil die übergebenen Parameter falsch sind. So kann der Auftraggeber
 	 *                                    zum Beispiel nicht die nötigen Rechte besitzen ein Einmal-Passwort anzulegen oder das Passwort existierte bereits, usw..
+	 *                                    
+	 * @deprecated Bei Verwendung von SRP bzw. verschlüsselten Logins wird systembedingt der Index des Einmalpassworts benötigt. Diesen gibt die Methode nicht zurück.
+	 * Daher ist die Methode (zumindest ohne direkten Zugriff auf die benutzerverwaltung.xml) bei Verwendung von verschlüsselter Anmeldung nicht mehr sinnvoll nutzbar.
+	 * Als Alternative gibt es die Methode {@link #createOneTimePasswords(String, String, String, String...)}, die allerdings eine aktuelle Konfiguration voraussetzt.
 	 */
+	@Deprecated
 	public void createSingleServingPassword(String orderer, String ordererPassword, String username, String singleServingPassword)
 			throws ConfigurationTaskException;
 
@@ -197,6 +224,8 @@ public interface UserAdministration {
 	 * @return Anzahl der noch vorhandenen, gültigen Einmal-Passwörter
 	 *
 	 * @throws ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen.
+	 * 
+	 * @see #getValidOneTimePasswordIDs(String, String, String) 
 	 */
 	public int getSingleServingPasswordCount(String orderer, String ordererPassword, String username) throws ConfigurationTaskException;
 
@@ -213,7 +242,7 @@ public interface UserAdministration {
 	public void clearSingleServingPasswords(String orderer, String ordererPassword, String username) throws ConfigurationTaskException;
 
 	/**
-	 * Prüft, ob ein angegebener Benutzername gültig ist, d.h. ob er ein zugeordnetes Systemobjekt und einen Eintrag in der Benutzerverwaltung.xml hat. Jeder
+	 * Prüft, ob ein angegebener Benutzername gültig ist, d.h. ob er ein zugeordnetes Systemobjekt und einen Eintrag in der benutzerverwaltung.xml hat. Jeder
 	 * Benutzer kann diese Aktion ausführen. Zur (verschlüsselten) Übertragung des Vorgangs ist dennoch die Angabe eines gültigen Benutzernamens und Passworts
 	 * notwendig. Mit dieser Funktion kann geprüft werden, ob die Benutzernamen, die {@link #subscribeUserChangeListener(de.bsvrz.dav.daf.main.config.MutableCollectionChangeListener)
 	 * } liefert, tatsächlichen zu einem gültigen Benutzer gehören, da subscribeUserChangeListener nur die Systemobjekte berücksichtigt.
@@ -233,7 +262,7 @@ public interface UserAdministration {
 	 * Erstellt einen Listener der Änderungen an den Benutzern überwacht. Gibt eine aktuelle Liste aller Benutzer zurück.
 	 * @param listener Objekt, an das Rückmeldungen gesendet werden sollen. <code>null</code>, wenn nur die Liste der aktuellen Benutzer geholt werden soll.
 	 * @return Liste der aktuell vorhandenen Benutzer. Es ist eventuell ratsam, mit isUserValid zu prüfen, ob die Benutzer tatsächlich in der
-	 * Benutzerverwaltung.xml abgelegt sind, da hier nur die SystemObjekte berücksichtigt werden.
+	 * benutzerverwaltung.xml abgelegt sind, da hier nur die SystemObjekte berücksichtigt werden.
 	 */
 	public List<SystemObject> subscribeUserChangeListener(MutableCollectionChangeListener listener);
 
@@ -242,4 +271,103 @@ public interface UserAdministration {
 	 * @param listener Objekt, and das keine Rückmeldungen mehr gesendet werden sollen.
 	 */
 	public void unsubscribeUserChangeListener(MutableCollectionChangeListener listener);
+
+	/**
+	 * Gibt den aktuellen Überprüfungscode zurück, mit dem eine Applikation (oder der Datenverteiler) eine SRP-Authentifizierung durchführen kann und damit
+	 * feststellen kann, ob ein Benutzer sein Passwort kennt.
+	 * <p>
+	 * In der Antwort ist außerdem das Passwort-Salt enthalten, welches benötigt wird um (bei Kenntnis des Passworts) ein Authentifizierungs-Token für eine
+	 * passwd-Datei zu erzeugen. Hierfür kann die Methode {@link SrpClientAuthentication#createLoginToken(de.bsvrz.dav.daf.communication.srpAuthentication.SrpVerifierData, java.lang.String, java.lang.String)}
+	 * benutzt werden.
+	 * <p>
+	 * Es ist jedem Benutzer gestattet seinen eigenen Überprüfungscode abzufragen. Benutzer mit Admin-Rechten können auch fremde Überprüfungs-Codes abfragen. Zu
+	 * beachten ist, dass es mit einem Überprüfungscode nur möglich ist, zu prüfen ob ein Passwort gültig ist. Es sind keine Rückschlüsse auf das
+	 * Klartextpasswort oder auf den Authentifizierungs-Token x möglich.
+	 * <p>
+	 * Ist der Benutzer nicht vorhanden, ist die User-ID 0, aber die Konfiguration generiert dennoch einen "gefälschten" Verifier. Auf diese Weise kann ein
+	 * Verwender dieser Klasse erreichen, dass nicht-eingeloggte Clients nicht einfach ausprobieren können, welche Benutzer existieren und welche nicht. Dieses
+	 * Verhalten wird besonders bei der Authentifizierung am Datenverteiler benötigt, andere Anwender dieser Klasse können den gefälschten Verifier in der Regel
+	 * ignorieren, außer es soll ein ähnliches Verhalten erreicht werden. Siehe hierzu z.B. {@link de.bsvrz.dav.daf.communication.srpAuthentication.SrpServerAuthentication#step1(String, BigInteger, BigInteger, boolean)}.
+	 *
+	 * @param orderer         Auftraggeber
+	 * @param ordererPassword Passwort des Auftraggebers
+	 * @param username        Benutzername des Benutzers, von dem der Überprüfungscode geholt werden soll.
+	 * @param passwordIndex   Optional kann der Verifier eines Einmalpassworts mit dem angegebenen Index angefragt werden. 
+	 *                           
+	 * @return ID des Benutzers (oder 0) und die zugehörigen SRP-Daten
+	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen. Insbesondere wird die spezifischere {@link SrpNotSupportedException}
+	 * geworfen, wenn die Konfiguration SRP nicht unterstützt und aktualisiert werden muss.
+	 */
+	public SrpVerifierAndUser getSrpVerifier(String orderer, String ordererPassword, String username, final int passwordIndex) throws ConfigurationTaskException;
+	
+	/**
+	 * Gibt den aktuellen Überprüfungscode zurück, mit dem eine Applikation (oder der Datenverteiler) eine SRP-Authentifizierung durchführen kann und damit
+	 * feststellen kann, ob ein Benutzer sein Passwort kennt.
+	 * <p>
+	 * In der Antwort ist außerdem das Passwort-Salt enthalten, welches benötigt wird um (bei Kenntnis des Passworts) ein Authentifizierungs-Token für eine
+	 * passwd-Datei zu erzeugen. Hierfür kann die Methode {@link SrpClientAuthentication#createLoginToken(de.bsvrz.dav.daf.communication.srpAuthentication.SrpVerifierData, java.lang.String, java.lang.String)}
+	 * benutzt werden.
+	 * <p>
+	 * Es ist jedem Benutzer gestattet seinen eigenen Überprüfungscode abzufragen. Benutzer mit Admin-Rechten können auch fremde Überprüfungs-Codes abfragen. Zu
+	 * beachten ist, dass es mit einem Überprüfungscode nur möglich ist, zu prüfen ob ein Passwort gültig ist. Es sind keine Rückschlüsse auf das
+	 * Klartextpasswort oder auf den Token x möglich.
+	 * <p>
+	 * Ist der Benutzer nicht vorhanden, ist die User-ID 0, aber die Konfiguration generiert dennoch einen "gefälschten" Verifier. Auf diese Weise kann ein
+	 * Verwender dieser Klasse erreichen, dass nicht-eingeloggte Clients nicht einfach ausprobieren können, welche Benutzer existieren und welche nicht. Dieses
+	 * Verhalten wird besonders bei der Authentifizierung am Datenverteiler benötigt, andere Anwender dieser Klasse können den gefälschten Verifier in der Regel
+	 * ignorieren, außer es soll ein ähnliches Verhalten erreicht werden. Siehe hierzu z.B. {@link de.bsvrz.dav.daf.communication.srpAuthentication.SrpServerAuthentication#step1(String, BigInteger, BigInteger, boolean)}.
+	 *
+	 * @param orderer         Auftraggeber
+	 * @param ordererPassword Passwort des Auftraggebers
+	 * @param username        Benutzername des Benutzers, von dem der Überprüfungscode geholt werden soll.
+	 * @return ID des Benutzers (oder 0) und die zugehörigen SRP-Daten
+	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen. Insbesondere wird die spezifischere {@link SrpNotSupportedException}
+	 * geworfen, wenn die Konfiguration SRP nicht unterstützt und aktualisiert werden muss.
+	 */
+	public default SrpVerifierAndUser getSrpVerifier(String orderer, String ordererPassword, String username) throws ConfigurationTaskException {
+		return getSrpVerifier(orderer, ordererPassword, username, -1);
+	}
+
+	/**
+	 * Markiert ein einzelnes Einmalpasswort als ungültig. Es ist jedem Benutzer
+	 * gestattet die Passwörter seines eigenen Accounts zu löschen. Soll ein fremdes Benutzerkonto geändert werden, sind Admin-Rechte nötig.
+	 * @param orderer Auftraggeber
+	 * @param ordererPassword Auftraggeber-Passwort
+	 * @param username Benutzer, dessen Einmalpasswort als ungültig/benutzt markiert werden soll
+	 * @param passwordIndex Index des Einmalpassworts (>= 0)
+	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen (z.B. Login-Daten falsch oder die Konfiguration unterstützt den Auftrag nicht und muss aktualisiert werden).
+	 */
+	public void disableOneTimePassword(String orderer, String ordererPassword, String username, int passwordIndex)  throws ConfigurationTaskException;
+
+	/**
+	 * Fügt einem Benutzer eine Liste von Einmalpasswörtern hinzu. Die Einmalpasswörter werden in der Reihenfolge in der Konfiguration gespeichert, wie sie übergeben werden,
+	 * d.h. das Passwort mit dem Array-Index 0 enthält den nächsten freien Index, den diese Methode zurückgibt. Beispiel: Diese Methode gibt 9 zurück,
+	 * dann enthält das erste übergebene Passwort den Index 9, das zweite den Index 10 usw. Will sich der Benutzer später mit einem Einmalpasswort einloggen, muss er
+	 * den Passwort-Index mit einem Minus getrennt an seinen Benutzernamen anhängen, z.B. "Tester-19" für das Einmalpasswort mit Index 19 am Benutzer Tester.
+	 *
+	 * Damit dieser Auftrag ausgeführt werden kann, muss der Auftraggeber <code>orderer</code> die Rechte eines Administrators besitzen. Besitzt der Auftraggeber
+	 * diese Rechte nicht, wird der Auftrag zwar zur Konfiguration übertragen, dort aber abgelehnt.
+	 * 
+	 * @param orderer Auftraggeber
+	 * @param ordererPassword Passwort des Auftraggebers
+	 * @param username Benutzername für den Passwörter angelegt werden sollen
+	 * @param passwords Anzulegende Passwörter
+	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen (z.B. Login-Daten falsch oder die Konfiguration unterstützt den Auftrag nicht und muss aktualisiert werden).
+	 * @return Index des ersten eingefügten Passworts
+	 */
+	public int createOneTimePasswords(String orderer, String ordererPassword, String username, String... passwords) throws ConfigurationTaskException;
+
+	/**
+	 * Gibt von einem Benutzer die Indizes der noch unbenutzten, verwendbaren, Einmalpasswörter zurück. Die Länge des Arrays entspricht der Rückgabe von {@link #getSingleServingPasswordCount(String, String, String)}.
+	 *
+	 * Damit dieser Auftrag für einen fremden Benutzer ausgeführt werden kann, muss der Auftraggeber <code>orderer</code> die Rechte eines Administrators besitzen. Besitzt der Auftraggeber
+	 * diese Rechte nicht, wird der Auftrag zwar zur Konfiguration übertragen, dort aber abgelehnt. Für den eigenen Benutzer ist die Anfrage in jedem Fall erlaubt.
+	 *
+	 * @param orderer Auftraggeber
+	 * @param ordererPassword Passwort des Auftraggebers
+	 * @param username Benutzername für den Passwörter angelegt werden sollen
+	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen (z.B. Login-Daten falsch oder die Konfiguration unterstützt den Auftrag nicht und muss aktualisiert werden).
+	 * @return Indizes der noch verwendbaren Einmalpasswörter (leeres Array falls keine Passwörter mehr verfügbar sind), aufsteigend sortiert.
+	 */
+	public int[] getValidOneTimePasswordIDs(String orderer, String ordererPassword, String username) throws ConfigurationTaskException;
 }

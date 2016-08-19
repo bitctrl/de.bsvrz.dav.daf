@@ -32,7 +32,7 @@ import de.bsvrz.dav.daf.main.config.IntegerValueState;
 import de.bsvrz.dav.daf.main.config.ObjectLookup;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.*;
+import java.util.Iterator;
 
 /**
  * Schnittstelle zum generischen Zugriff auf Attributwerte in beliebig strukturierten Attributgruppen. Zum Erzeugen eines neuen Datensatzes kann die Methode

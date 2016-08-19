@@ -39,6 +39,7 @@ import de.bsvrz.sys.funclib.debug.Debug;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Implementierung eines Deserialisierers zum deserialisieren von Datensätzen. Die Klasse ist nicht öffentlich
@@ -381,6 +382,29 @@ final class DeserializerImplementationA implements Deserializer {
 			return systemObject;
 		}
 		return null;
+	}
+
+	/**
+	 * Liest mehrere Objektreferenzen vom Eingabe-Stream dieses Deserialisierers. Diese Methode liefert das gleiche Resultat wie
+	 *
+	 *     size = readInt()
+	 *
+	 * gefolgt von *size* Aufrufen von 
+	 *
+	 *     readObjectReference(). 
+	 *
+	 * @param dataModel Datenmodell mit dessen Hilfe Objektreferenzen aufgelöst werden.
+	 * @return Arrays von referenzierten Systemobjekten (ggf. mit null-Elementen wenn ein Objekt nicht aufgelöst werden konnte)
+	 * @throws IOException Wenn beim Lesen vom Eingabe-Stream Fehler aufgetreten sind.
+	 */
+	@Override
+	public List<SystemObject> readObjectReferences(final DataModel dataModel) throws IOException {
+		int size = readInt();
+		final long[] ids = new long[size];
+		for(int i = 0; i < size; i++) {
+			ids[i] = readLong();
+		}
+		return dataModel.getObjects(ids);
 	}
 
 	/**

@@ -25,7 +25,10 @@
  */
 package de.bsvrz.dav.daf.util;
 
-import java.util.*;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 
 /**
  * Minimalimplementierung eines Sets. Nur geeignet für wenige Elemente.
@@ -62,21 +65,25 @@ public class MiniSet<E> extends AbstractSet<E> {
 
 	@Override
 	public boolean remove(final Object o) {
+		if(_innerList == null) return false;
 		return _innerList.remove(o);
 	}
 
 	@Override
 	public boolean removeAll(final Collection<?> c) {
+		if(_innerList == null) return false;
 		return _innerList.removeAll(c);
 	}
 
 	@Override
 	public boolean retainAll(final Collection<?> c) {
+		if(_innerList == null) return false;
 		return _innerList.retainAll(c);
 	}
 
 	@Override
 	public boolean containsAll(final Collection<?> c) {
+		if(_innerList == null) return c.isEmpty();
 		return _innerList.containsAll(c);
 	}
 

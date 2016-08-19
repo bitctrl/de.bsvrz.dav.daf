@@ -31,7 +31,8 @@ import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.ReceiveOptions;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Schnittstelle, die von Applikationen benutzt wird, um Anfragen an ein Archivsystem zu stellen. Eine konkrete Implementierung wird von den

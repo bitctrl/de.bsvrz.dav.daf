@@ -30,7 +30,7 @@ package de.bsvrz.dav.daf.communication.lowLevel;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.ApplicationDataTelegram;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
 
-import java.util.*;
+import java.util.Hashtable;
 
 
 /**

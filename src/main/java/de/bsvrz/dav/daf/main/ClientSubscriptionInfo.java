@@ -205,7 +205,13 @@ public class ClientSubscriptionInfo {
 
 		@Override
 		public String toString() {
-			return getApplicationPidOrId();
+			return getApplicationPidOrId() +
+					" " +
+					getState() +
+					" " +
+					getConnectionState() +
+					" " +
+					(isSource() ? "Quelle" : " Sender");	
 		}
 
 		public String getApplicationPidOrId() {
@@ -328,7 +334,13 @@ public class ClientSubscriptionInfo {
 
 		@Override
 		public String toString() {
-			return getApplicationPidOrId();
+			return getApplicationPidOrId() + 
+					" " + 
+					getState() + 
+					" " + 
+					getConnectionState() + 
+					" " + 
+					(isDrain() ? "Senke" : " Empfänger");
 		}
 
 		public String getApplicationPidOrId() {
@@ -346,7 +358,15 @@ public class ClientSubscriptionInfo {
 
 	@Override
 	public String toString() {
-		return "ClientSubscriptionInfo{" + "_receiverSubscriptions=" + _senderSubscriptions + ", _senderSubscriptions=" + _receiverSubscriptions + '}';
+		StringBuilder stringBuilder = new StringBuilder();
+		stringBuilder.append("Ankommende Anmeldungen:\n");
+		for(ClientReceivingSubscription receiverSubscription : _receiverSubscriptions) {
+			stringBuilder.append(receiverSubscription.toString()).append("\n");
+		}
+		stringBuilder.append("Ausgehende Anmeldungen:\n");
+		for(ClientSendingSubscription sendingSubscription : _senderSubscriptions) {
+			stringBuilder.append(sendingSubscription.toString()).append("\n");
+		}		return stringBuilder.toString();
 	}
 
 	public class DavInformation {

@@ -25,20 +25,19 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
+import de.bsvrz.dav.daf.main.Data;
+import de.bsvrz.dav.daf.main.DataNotSubscribedException;
+import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
 import de.bsvrz.dav.daf.main.archive.ArchiveQueryResult;
+import de.bsvrz.dav.daf.main.config.ConfigurationException;
+import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
 import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
 import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
-import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
-import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
-import de.bsvrz.dav.daf.main.DataNotSubscribedException;
-import de.bsvrz.dav.daf.main.Data;
+import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-
-import de.bsvrz.sys.funclib.debug.Debug;
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
+import java.io.InputStream;
 
 /**
  * Diese Klasse stellt ein Objekt zur Verfügung, mit dem ein Archivsystem beauftragt werden kann alle Datensätze,

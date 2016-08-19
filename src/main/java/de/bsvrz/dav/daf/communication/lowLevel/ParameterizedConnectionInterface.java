@@ -27,8 +27,6 @@
 
 package de.bsvrz.dav.daf.communication.lowLevel;
 
-import de.bsvrz.dav.daf.main.CommunicationError;
-
 /**
  * Eine Implementierung der Interfaces ServerConnectionInterface und ConnectionInterface, die zusätzlich dieses Interfaces implementiert, verwaltet und
  * berücksichtigt zusätzliche Einstellungen, die über die Methoden setParameters() und getParameters() gesetzt bzw. abgefragt werden können.

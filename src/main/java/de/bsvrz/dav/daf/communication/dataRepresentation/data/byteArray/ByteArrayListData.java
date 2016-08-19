@@ -28,7 +28,8 @@ package de.bsvrz.dav.daf.communication.dataRepresentation.data.byteArray;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
 import de.bsvrz.dav.daf.main.Data;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

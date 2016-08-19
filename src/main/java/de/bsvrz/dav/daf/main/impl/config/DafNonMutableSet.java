@@ -32,7 +32,10 @@ import de.bsvrz.dav.daf.main.config.NonMutableSet;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Klasse, die den Zugriff auf Konfigurationsmengen seitens der Datenverteiler-Applikationsfunktionen ermöglicht.
@@ -67,8 +70,29 @@ public class DafNonMutableSet extends DafObjectSet implements NonMutableSet {
 			short validFromVersionNumber,
 			short validToVersionNumber,
 			long responsibleObjectId,
-			long setIds[],
-			ArrayList setElementIds
+			long[] setIds,
+			ArrayList<Long> setElementIds
+	) {
+		super(
+				id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds, setElementIds
+		);
+		_internType = NON_MUTABLE_SET;
+	}
+	
+	/** Erzeugt ein neues Objekt mit den angegebenen Eigenschaften */
+	public DafNonMutableSet(
+			long id,
+			String pid,
+			String name,
+			long typId,
+			byte state,
+			String error,
+			DafDataModel dataModel,
+			short validFromVersionNumber,
+			short validToVersionNumber,
+			long responsibleObjectId,
+			long[] setIds,
+			long[] setElementIds
 	) {
 		super(
 				id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds, setElementIds
@@ -83,39 +107,37 @@ public class DafNonMutableSet extends DafObjectSet implements NonMutableSet {
 	}
 
 	public final List<SystemObject> getElements() {
-		if((_setElementIds == null) || (_setElementIds.size() == 0)) {
-			return new ArrayList();
+		if((_setElementIds == null) || (_setElementIds.length == 0)) {
+			return new ArrayList<SystemObject>();
 		}
 		if(_setElements == null) {
-			final ArrayList<SystemObject> setElements = new ArrayList<SystemObject>();
-			for(Object setElementId : _setElementIds) {
-				final long objectId = ((Long)(setElementId)).longValue();
-				final SystemObject systemObject = _dataModel.getObject(objectId);
-				if(systemObject != null) {
-					setElements.add(systemObject);
+			_setElements = new ArrayList<>(_dataModel.getObjects(_setElementIds));
+			int idx = 0;
+			for(Iterator<SystemObject> iterator = _setElements.iterator(); iterator.hasNext(); ) {
+				final SystemObject setElement = iterator.next();
+				if(setElement == null) {
+					_debug.warning("Element der Menge " + getName() + " mit ID " + _setElementIds[idx] + " nicht gefunden (wird ignoriert)");
+					iterator.remove();
 				}
-				else {
-					_debug.warning("Element der Menge " + getName() + " mit ID " + objectId + " nicht gefunden (wird ignoriert)");
-				}
+				idx++;
 			}
-			_setElements = Collections.unmodifiableList(setElements);
 		}
 		return _setElements;
 	}
 
-	public final List getElementsInModifiableVersion() {
+	public final List<SystemObject> getElementsInModifiableVersion() {
 		return Collections.unmodifiableList(_dataModel.getSetElementsInNextVersion(this));
 	}
 
-	public final List getElementsInVersion(short version) {
+	public final List<SystemObject> getElementsInVersion(short version) {
 		return Collections.unmodifiableList(_dataModel.getSetElementsInVersion(this, version));
 	}
 
-	public final List getElementsInAllVersions(short fromVersion, short toVersion) {
+	public final List<SystemObject> getElementsInAllVersions(short fromVersion, short toVersion) {
 		return Collections.unmodifiableList(_dataModel.getSetElementsInAllVersions(this, fromVersion, toVersion));
 	}
 
-	public final List getElementsInAnyVersions(short fromVersion, short toVersion) {
+	public final List<SystemObject> getElementsInAnyVersions(short fromVersion, short toVersion) {
 		return Collections.unmodifiableList(_dataModel.getSetElementsInAnyVersions(this, fromVersion, toVersion));
 	}
 }

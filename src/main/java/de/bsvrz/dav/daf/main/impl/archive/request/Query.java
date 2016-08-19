@@ -29,15 +29,7 @@ package de.bsvrz.dav.daf.main.impl.archive.request;
 import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.DataNotSubscribedException;
 import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKindCombination;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataQueryResult;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataStream;
-import de.bsvrz.dav.daf.main.archive.ArchiveOrder;
-import de.bsvrz.dav.daf.main.archive.ArchiveQueryPriority;
-import de.bsvrz.dav.daf.main.archive.ArchiveRequestOption;
-import de.bsvrz.dav.daf.main.archive.ArchiveTimeSpecification;
-import de.bsvrz.dav.daf.main.archive.TimingType;
+import de.bsvrz.dav.daf.main.archive.*;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
@@ -52,7 +44,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Diese Klasse stellt alle Methoden zur Verfügung um eine Archivanfrage zu stellen, sie wird der Klasse {@link StreamedArchiveRequester} benutzt.

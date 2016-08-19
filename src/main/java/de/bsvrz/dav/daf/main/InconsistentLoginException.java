@@ -43,4 +43,13 @@ public class InconsistentLoginException extends Exception {
 	public InconsistentLoginException(String message) {
 		super(message);
 	}
+	/**
+	 * Erzeugt eine neue Authentifizierungsausnahme mit der spezifizierten Fehlernachricht.
+	 *
+	 * @param message Fehlernachricht
+	 * @param cause Grund
+	 */
+	public InconsistentLoginException(final String message, final Throwable cause) {
+		super(message, cause);
+	}
 }

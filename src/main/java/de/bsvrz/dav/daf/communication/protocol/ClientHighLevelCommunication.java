@@ -29,12 +29,14 @@
 package de.bsvrz.dav.daf.communication.protocol;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.SendDataObject;
-import de.bsvrz.dav.daf.communication.lowLevel.HighLevelCommunicationCallbackInterface;
-import de.bsvrz.dav.daf.communication.lowLevel.LowLevelCommunicationInterface;
-import de.bsvrz.dav.daf.communication.lowLevel.SplittedApplicationTelegramsTable;
-import de.bsvrz.dav.daf.communication.lowLevel.TelegramUtility;
+import de.bsvrz.dav.daf.communication.lowLevel.*;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.*;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpClientAuthentication;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpNotSupportedException;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpTelegramEncryption;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpUtilities;
 import de.bsvrz.dav.daf.main.*;
+import de.bsvrz.dav.daf.main.authentication.ClientCredentials;
 import de.bsvrz.dav.daf.main.impl.CacheManager;
 import de.bsvrz.dav.daf.main.impl.CommunicationConstant;
 import de.bsvrz.dav.daf.main.impl.ConfigurationManager;
@@ -43,9 +45,7 @@ import de.bsvrz.dav.daf.main.impl.config.AttributeGroupUsageIdentifications;
 import de.bsvrz.sys.funclib.concurrent.UnboundedQueue;
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 
 /**
  * Das Modul Protokollsteuerung ist das Bindeglied der Komponente Kommunikation zwischen den Modulen Telegrammverwaltung und Verwaltung. Es stellt für die
@@ -89,7 +89,10 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	/** Der Debug-Logger. */
 	private static final Debug _debug = Debug.getLogger();
 
-	/** Die eingestellte Protokollversion */
+	/** Alle unterstützten Protokollversionen */
+	private static final Set<Integer> _supportedProtocolVersions = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(3,4)));
+
+	/** Die verwendete Protokollversion */
 	private int _dafVersion = 3;
 
 	/** Die Id des Benutzers */
@@ -139,6 +142,9 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 
 	/** Asynchrone Verarbeitung von empfangenen Sendsteuerungstelegrammen */
 	private ClientHighLevelCommunication.SendControlNotifier _sendControlNotifier;
+
+	/** Zustand der Authentifizierung */
+	private AuthenticationStatus _authenticationStatus = AuthenticationStatus.notAuthenticated();
 	
 	// Für Tests
 	private static boolean DO_NOT_SEND_AUTH_REQUEST_FOR_TESTS = false;
@@ -185,9 +191,12 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 			errorMessage = "Der Datenverteiler antwortet nicht auf die Verhandlung der Protokollversionen";
 		}
 		else {
-			int davVersion = protocolVersionAnswer.getPreferredVersion();
-			if(davVersion != _dafVersion) {
-				errorMessage = "Die lokale Protokollversion (" + _dafVersion + ") wird vom Datenverteiler nicht unterstützt.";
+			_dafVersion = protocolVersionAnswer.getPreferredVersion();
+			if(_dafVersion == -1) {
+				errorMessage = "Die Protokollversionen " + _supportedProtocolVersions + " werden vom Datenverteiler nicht unterstützt.";
+			}
+			else if(!_supportedProtocolVersions.contains(_dafVersion)) {
+				errorMessage = "Die vom Datenverteiler vorgegebene Protokollversion (" + _dafVersion + ") wird lokal nicht unterstützt.";
 			}
 		}
 		if(errorMessage != null) {
@@ -204,6 +213,14 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 */
 	public boolean isDisconnecting() {
 		return _disconnecting;
+	}
+
+	public EncryptionStatus getEncryptionStatus() {
+		return properties.getLowLevelCommunication().getEncryptionStatus();
+	}
+
+	public AuthenticationStatus getAuthenticationStatus() {
+		return _authenticationStatus;
 	}
 
 	/**
@@ -241,6 +258,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 		}
 
 		/** Methode zur asynchronen Verarbeitung von gespeicherten Telegrammen durch einen eigenen Thread. */
+		@Override
 		public void run() {
 			try {
 				RequestSenderDataTelegram telegram;
@@ -353,21 +371,33 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 * @throws de.bsvrz.dav.daf.main.InconsistentLoginException Wenn die Authentifizierung nicht erfolgreich abgeschlossen werden konnte.
 	 * @throws CommunicationError         Wenn eine Antwort nicht innerhalb einer parametrierten Zeit vom Datenverteiler beantwortet wird oder wenn als Id der
 	 *                                    Konfiguration eine <code>-1</code> ermittelt wird.
+	 * @param clientCredentials           Passwort oder Login-Token
 	 */
-	public final void connect() throws InconsistentLoginException, CommunicationError {
+	public final void login(final ClientCredentials clientCredentials) throws InconsistentLoginException, CommunicationError {
 		_syncSystemTelegramList.clear();
-		// Authentifikationstext holen
-		AuthentificationTextAnswer text = getAuthentificationText();
-		if(text == null) {
-			throw new CommunicationError("Der Datenverteiler antwortet nicht auf die Authentifikationsschlüsselanforderung.\n");
-		}
-		byte password[] = text.getEncryptedPassword(properties.getAuthentificationProcess(), properties.getUserPassword());
 
-		// User Authentifizierung
-		AuthentificationAnswer authentification = authentify(password);
-		if(authentification == null) {
-			throw new CommunicationError("Der Datenverteiler antwortet nicht auf die Authentifikationsanforderung.\n");
+		_authenticationStatus = AuthenticationStatus.notAuthenticated();
+
+		AuthentificationAnswer authentification;
+		if(_dafVersion >= 4 && System.getProperty("srp6.disable.login") == null) {
+			try {
+				// Anmeldung per SRP versuchen (Verschlüsselung)
+				authentification = authenticateSRP(clientCredentials);
+			}
+			catch(SrpNotSupportedException e) {
+				// Als Fallback die klassische Anmeldung versuchen.
+				// Dieser Fall tritt auf, wenn der Datenverteiler SRP untersützt (da Versionsnummer >= 4)
+				// aber die Konfiguration kein SRP kann
+				_debug.warning("Verschlüsselte Anmeldung per SRP fehlgeschlagen, da die Konfiguration keine Verschlüsselung unterstützt", e);
+				authentification = authenticateHMAC(clientCredentials);
+			}
 		}
+		else {
+			// Datenverteiler kann kein SRP
+			_debug.warning("Der Datenverteiler unterstützt keine Verschlüsselung und sollte aktualisiert werden");
+			authentification = authenticateHMAC(clientCredentials);
+		}
+
 		if(!authentification.isSuccessfullyAuthentified()) {
 			throw new InconsistentLoginException("Die Authentifikationsdaten sind fehlerhaft.");
 		}
@@ -393,6 +423,92 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 				(long)(comParametersAnswer.getFlowControlThresholdTime() * 1000),
 				comParametersAnswer.getMinConnectionSpeed()
 		);
+	}
+
+	/**
+	 * Authentifizierung mittels eines HMAC-Verfahrens (o.ä.) über das Interface
+	 * {@link AuthentificationProcess}. Dabei sendet der Server an den Client einen Zufallstext
+	 * welches der Client zusammen mit seinem Passwort (Einweg-)verschlüsselt. Der Server macht das
+	 * selbe und kann bei Übereinstimmung der Hashes annehmen, dass der Client das Passwort kennt.
+	 * @return Antwort vom Server
+	 * @throws CommunicationError Verbindungsfehler (Server Antwortet nicht)
+	 * @param clientCredentials  Passwort (Bei Login-Token wird ein Fehler ausgelöst)
+	 */
+	private AuthentificationAnswer authenticateHMAC(final ClientCredentials clientCredentials) throws CommunicationError {
+		if(!getConnectionProperties().isHmacAuthenticationAllowed()){
+			throw new CommunicationError("Datenverteiler und/oder Konfiguration sind veraltet und unterstützen die sichere SRP-Authentifizierung nicht, und die alte Authentifizierung ist nicht erlaubt. (Aufrufparameter: -erlaubeHmacAuthentifizierung)");
+		}
+		
+		// Authentifikationstext holen
+		AuthentificationTextAnswer text = getAuthentificationText();
+		if(text == null) {
+			throw new CommunicationError("Der Datenverteiler antwortet nicht auf die Authentifikationsschlüsselanforderung.\n");
+		}
+		if(!clientCredentials.hasPassword()){
+			throw new CommunicationError("Die Authentifizierung mit einem Login-Token ist nicht möglich, da der Datenverteiler nur die Passwort-basierte Authentifizierung unterstützt.\n");
+		}
+		byte[] password = text.getEncryptedPassword(properties.getAuthentificationProcess(), new String(clientCredentials.getPassword()));
+
+		// User Authentifizierung
+		AuthentificationAnswer authentification = authentify(password);
+		if(authentification == null) {
+			throw new CommunicationError("Der Datenverteiler antwortet nicht auf die Authentifikationsanforderung.\n");
+		}
+
+		if(authentification.isSuccessfullyAuthentified()) {
+			_authenticationStatus = AuthenticationStatus.authenticated(properties.getAuthentificationProcess().getName());
+		}
+
+		return authentification;
+	}
+
+	/**
+	 * Authentifizierung mittels SRP, ein Verfahren bei dem der Server das Passwort nicht kennen muss und
+	 * das einen Session-Key zur Verschlüsselung erzeugen kann. Siehe http://connect2id.com/products/nimbus-srp
+	 * @return Antwort vom Server
+	 * @throws CommunicationError Verbindungsfehler (Server Antwortet nicht)
+	 * @param clientCredentials Passwort oder Login-Token
+	 */
+	private AuthentificationAnswer authenticateSRP(final ClientCredentials clientCredentials) throws CommunicationError, InconsistentLoginException, SrpNotSupportedException {
+		ClientTelegramInterface queue = new ClientTelegramInterface();
+
+		final LowLevelCommunicationInterface lowLevelCommunication = properties.getLowLevelCommunication();
+		final SrpClientAuthentication.AuthenticationResult authenticationResult = SrpClientAuthentication.authenticate(properties.getUserName(), properties.getPasswordIndex(), clientCredentials, queue);
+
+		lowLevelCommunication.enableEncryption(new SrpTelegramEncryption(SrpUtilities.bigIntegerToBytes(authenticationResult.getSessionKey()), true, authenticationResult.getCryptoParams()));
+		if(!isSelfClientDavConnection()) {
+			// Debug-Ausgaben bei SelfClientDavConnection unterdrücken, weil verwirrend
+			_debug.info("Verschlüsselte Verbindung aufgebaut mit", getEncryptionStatus().getCipher());
+		}
+
+		if(getConnectionProperties().getEncryptionPreference().shouldDisable(lowLevelCommunication.getConnectionInterface().isLoopback())) {
+			properties.getLowLevelCommunication().send(new DisableEncryptionRequest());
+			DisableEncryptionAnswer answer = (DisableEncryptionAnswer)getDataTelegram(CommunicationConstant.MAX_WAITING_TIME_FOR_SYNC_RESPONCE, DataTelegram.DISABLE_ENCRYPTION_ANSWER_TYPE);
+			if(answer == null) {
+				throw new CommunicationError("Datenverteiler antwortet nicht auf Anfrage zur Deaktivierung der Verschlüsselung");
+			}
+			if(answer.isDisabled()){
+				if(!isSelfClientDavConnection()) {
+					// Debug-Ausgaben bei SelfClientDavConnection unterdrücken, weil verwirrend
+					_debug.info("Verschlüsselung der Verbindung wird deaktiviert");
+				}
+				lowLevelCommunication.disableEncryption();
+			}
+		}
+
+		_authenticationStatus = AuthenticationStatus.authenticated("SRP");
+
+		// Beim Datenverteiler als Applikation anmelden
+		String configurationPid = properties.getConfigurationPid();
+		if(configurationPid.equals(CommunicationConstant.LOCALE_CONFIGURATION_PID_ALIASE)){
+			configurationPid = "";
+		}
+		lowLevelCommunication.send(new ApplicationRequest(properties.getApplicationName(), properties.getApplicationTypePid(), configurationPid));
+		return (AuthentificationAnswer) queue.getDataTelegram(DataTelegram.AUTHENTIFICATION_ANSWER_TYPE);
+	}
+
+	private boolean isSelfClientDavConnection() {
+		return getConnectionProperties().isSelfClientDavConnection();
 	}
 
 	/**
@@ -463,7 +579,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 * @param error   Ist <code>true</code>, wenn die Verbindung im Fehlerfall abgebrochen werden soll, ohne die noch gepufferten Telegramme zu versenden; <code>false</code>, wenn versucht werden soll alle gepufferten Telegramme zu versenden.
 	 * @param message Fehlermeldung, die die Fehlersituation näher beschreibt.
 	 */
-	public synchronized final void terminate(boolean error, String message) {
+	public final void terminate(boolean error, String message) {
 		final DataTelegram terminationTelegram;
 		if(error) {
 			terminationTelegram = new TerminateOrderTelegram(message);
@@ -519,6 +635,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	}
 
 
+	@Override
 	public void disconnected(boolean error, final String message) {
 		terminate(error, message, null);
 	}
@@ -546,6 +663,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 * <p>
 	 * Jeder andere Telegrammtyp wird ignoriert.
 	 */
+	@Override
 	public final void update(DataTelegram telegram) throws InterruptedException {
 		if(telegram == null) {
 			return;
@@ -554,6 +672,9 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 			case DataTelegram.PROTOCOL_VERSION_ANSWER_TYPE:
 			case DataTelegram.AUTHENTIFICATION_TEXT_ANSWER_TYPE:
 			case DataTelegram.AUTHENTIFICATION_ANSWER_TYPE:
+			case DataTelegram.SRP_ANSWER_TYPE:
+			case DataTelegram.SRP_VALDIATE_ANSWER_TYPE:
+			case DataTelegram.DISABLE_ENCRYPTION_ANSWER_TYPE:
 			case DataTelegram.COM_PARAMETER_ANSWER_TYPE:
 			case DataTelegram.TELEGRAM_TIME_ANSWER_TYPE: {
 				synchronized(_syncSystemTelegramList) {
@@ -630,6 +751,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 		}
 	}
 
+	@Override
 	public final void updateConfigData(SendDataObject receivedData) {
 		if(_configurationManager != null) {
 			_configurationManager.update(receivedData);
@@ -654,8 +776,7 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 * @return Die Protokollversion-Telegramm-Antwort des Datenverteilers oder <code>null</code>, falls die Antwort nicht ermittelt werden konnte.
 	 */
 	private ProtocolVersionAnswer getProtocolVersions() {
-		int versions[] = {_dafVersion};
-		ProtocolVersionRequest protocolVersionRequest = new ProtocolVersionRequest(versions);
+		ProtocolVersionRequest protocolVersionRequest = new ProtocolVersionRequest(_supportedProtocolVersions.stream().mapToInt(x->x).toArray());
 		LowLevelCommunicationInterface lowLevelCommunication = properties.getLowLevelCommunication();
 		lowLevelCommunication.send(protocolVersionRequest);
 
@@ -892,5 +1013,29 @@ public class ClientHighLevelCommunication implements HighLevelCommunicationCallb
 	 */
 	public List<DataTelegram> getSyncSystemTelegramList() {
 		return _syncSystemTelegramList;
+	}
+
+
+	private class ClientTelegramInterface implements SrpClientAuthentication.TelegramInterface {
+
+		@Override
+		public SrpAnswer sendAndReceiveRequest(final SrpRequest telegram) throws CommunicationError {
+			properties.getLowLevelCommunication().send(telegram);
+			return (SrpAnswer) getDataTelegram(DataTelegram.SRP_ANSWER_TYPE);
+		}
+
+		@Override
+		public SrpValidateAnswer sendAndReceiveValidateRequest(final SrpValidateRequest telegram) throws CommunicationError {
+			properties.getLowLevelCommunication().send(telegram);
+			return (SrpValidateAnswer) getDataTelegram(DataTelegram.SRP_VALDIATE_ANSWER_TYPE);
+		}
+
+		private DataTelegram getDataTelegram(final byte telegramType) throws CommunicationError {
+			final DataTelegram telegram = ClientHighLevelCommunication.this.getDataTelegram(CommunicationConstant.MAX_WAITING_TIME_FOR_SYNC_RESPONCE, telegramType);
+			if(telegram == null) {
+				throw new CommunicationError("Der Datenverteiler antwortet nicht bei der SRP-Authentifizierung");
+			}
+			return telegram;
+		}
 	}
 }

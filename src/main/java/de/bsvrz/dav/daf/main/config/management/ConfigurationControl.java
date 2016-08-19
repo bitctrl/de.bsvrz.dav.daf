@@ -33,7 +33,8 @@ import de.bsvrz.dav.daf.main.config.ConfigurationTaskException;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultInterface;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Dieses Interface enthält alle nötigen Zugriffsmethoden, um die Konfigurationsdaten im Sinne des Konfigurationseditors zu manipulieren. Dazu gehört auch der

@@ -27,24 +27,8 @@
 
 package de.bsvrz.dav.daf.main.impl;
 
-import de.bsvrz.dav.daf.main.ClientDavConnection;
-import de.bsvrz.dav.daf.main.DataDescription;
-import de.bsvrz.dav.daf.main.ResultData;
-
-import java.util.*;
-
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
-import de.bsvrz.dav.daf.main.config.Aspect;
-import de.bsvrz.dav.daf.main.config.SystemObjectType;
-import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.config.AttributeGroup;
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.InitialisationNotCompleteException;
-import de.bsvrz.dav.daf.main.ReceiverRole;
-import de.bsvrz.dav.daf.main.ClientReceiverInterface;
-import de.bsvrz.dav.daf.main.ReceiveOptions;
-import de.bsvrz.dav.daf.main.Data;
-import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeBaseValue;
+import de.bsvrz.dav.daf.main.*;
+import de.bsvrz.dav.daf.main.config.*;
 
 /**
  * Klasse zum Zugriff auf den Zeitfluß einer Simulation. Nach dem Erzeugen eines Objekts dieser Klasse kann mit der Methode {@link #getTime()} auf die

@@ -31,7 +31,8 @@ import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.config.ObjectLookup;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

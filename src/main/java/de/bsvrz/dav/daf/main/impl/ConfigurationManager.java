@@ -259,7 +259,10 @@ public class ConfigurationManager {
 	 * @param processName       der Authentifikationsvervahren
 	 *
 	 * @throws ConfigurationException Wenn von der Konfiguration keine Antwort innerhalb eine bestimmten Zeit angekommen ist.
+	 * 
+	 * @deprecated Funktioniert mit der neuen SRP-Authentifizierung nicht mehr, stattdessen {@link de.bsvrz.dav.daf.main.config.management.UserAdministration}-Interface verwenden.
 	 */
+	@Deprecated
 	public final long isValidUser(String userName, byte encriptedPassword[], String text, String processName) throws ConfigurationException {
 		BaseSubscriptionInfo readBaseSubscriptionInfo = new BaseSubscriptionInfo(
 				_configurationId, AttributeGroupUsageIdentifications.CONFIGURATION_READ_REQUEST, (short)0

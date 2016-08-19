@@ -27,23 +27,16 @@
 
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import java.util.Map;
-import java.util.HashMap;
-
-import de.bsvrz.sys.funclib.debug.Debug;
+import de.bsvrz.dav.daf.main.*;
+import de.bsvrz.dav.daf.main.config.Aspect;
 import de.bsvrz.dav.daf.main.config.AttributeGroup;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.config.Aspect;
 import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.Data;
-import de.bsvrz.dav.daf.main.ClientDavInterface;
-import de.bsvrz.dav.daf.main.DataNotSubscribedException;
-import de.bsvrz.dav.daf.main.ClientReceiverInterface;
-import de.bsvrz.dav.daf.main.ReceiverRole;
-import de.bsvrz.dav.daf.main.ReceiveOptions;
-import de.bsvrz.dav.daf.main.ResultData;
-import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.impl.NonQueueingReceiver;
+import de.bsvrz.sys.funclib.debug.Debug;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Diese Klasse verwaltet Archivantworten, die an unterschiedliche StreamedArchiveRequester gerichtet sind und sorgt dafür, dass jeder StreamedArchivRequester

@@ -28,19 +28,10 @@
 package de.bsvrz.dav.daf.communication.dataRepresentation;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
-import de.bsvrz.dav.daf.main.config.Attribute;
-import de.bsvrz.dav.daf.main.config.AttributeListDefinition;
-import de.bsvrz.dav.daf.main.config.AttributeSet;
-import de.bsvrz.dav.daf.main.config.AttributeType;
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.config.DoubleAttributeType;
-import de.bsvrz.dav.daf.main.config.IntegerAttributeType;
-import de.bsvrz.dav.daf.main.config.ReferenceAttributeType;
-import de.bsvrz.dav.daf.main.config.StringAttributeType;
-import de.bsvrz.dav.daf.main.config.TimeAttributeType;
+import de.bsvrz.dav.daf.main.config.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Diese Klasse stellt Methoden zur Verfügung, um die Interfaces der Konfiguration zu entschlacken.

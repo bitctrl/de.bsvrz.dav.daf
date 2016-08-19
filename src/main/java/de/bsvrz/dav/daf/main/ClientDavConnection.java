@@ -36,19 +36,26 @@ import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.SendSubscriptionInfo;
 import de.bsvrz.dav.daf.communication.protocol.ClientConnectionProperties;
 import de.bsvrz.dav.daf.communication.protocol.ClientHighLevelCommunication;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpClientAuthentication;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpCryptoParameter;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpVerifierData;
 import de.bsvrz.dav.daf.main.archive.ArchiveRequestManager;
+import de.bsvrz.dav.daf.main.authentication.ClientCredentials;
 import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.main.impl.*;
 import de.bsvrz.dav.daf.main.impl.archive.request.StreamedRequestManager;
 import de.bsvrz.dav.daf.main.impl.config.AttributeGroupUsageIdentifications;
 import de.bsvrz.dav.daf.main.impl.config.DafDataModel;
+import de.bsvrz.dav.daf.util.Throttler;
 import de.bsvrz.sys.funclib.debug.Debug;
 import de.bsvrz.sys.funclib.timeout.TimeoutTimer;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
 
 /**
  * Diese Klasse repräsentiert die logische Verbindung zum Datenverteiler.
@@ -133,9 +140,22 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	private TransactionManager _transactionManager = null;
 
+	/** Zweite Verbindung oder null */
 	private ClientDavConnection _dataModelConnection = null;
 	
+	/** Synchronisierungs-Lock der Verbindung (bzw. gemeinsames Lock der 2 Verbindungen wenn eine zweite Verbindung benutzt wird */
 	private final Object _lock;
+	
+	private Map<ConfigurationAuthority, DynamicTypeTable> _dynamicTypeAreas = new HashMap<>();
+	
+	/** Überprüfungscode zum prüfen des lokalen Passworts mit {@link #checkLoggedUserNameAndPassword(String, String)}. */
+	private SrpVerifierData _localVerifier = null;
+	
+	/** listener, der sich auf das Terminieren der zweiten Verbindung anmeldet */
+	private DavConnectionListener _secondConnectionListener;
+	
+	/** Klasse zum Ausbremsen von Login-Versuchen über {@link #checkLoggedUserNameAndPassword(String, String)} */
+	private final Throttler _throttler = new Throttler(Duration.ofSeconds(1), Duration.ofSeconds(5));
 
 	/**
 	 * Erzeugt eine neue logische Datenverteilerverbindung mit Default-Parametern.
@@ -254,15 +274,16 @@ public class ClientDavConnection implements ClientDavInterface {
 					// Sollte nicht vorkommen, da die 2. Verbindung praktisch identische Parameter verwendet, wie die erste
 					throw new RuntimeException(e);
 				}
-				_dataModelConnection.addConnectionListener(
-						new DavConnectionListener() {
-							@Override
-							public void connectionClosed(final ClientDavInterface connection) {
-								if(_isConnected) {
-									disconnect(false, "");
-								}
-							}
+				_secondConnectionListener = new DavConnectionListener() {
+					@Override
+					public void connectionClosed(final ClientDavInterface connection) {
+						if(_isConnected) {
+							disconnect(false, "");
 						}
+					}
+				};
+				_dataModelConnection.addConnectionListener(
+						_secondConnectionListener
 				);
 				_dataModelConnection.setCloseHandler(
 						new ApplicationCloseActionHandler() {
@@ -443,6 +464,14 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	@Override
 	public final void login() throws InconsistentLoginException, CommunicationError {
+		String userName = _highLevelCommunication.getConnectionProperties().getUserName();
+		if(userName.isEmpty()) {
+			throw new IllegalStateException("Benutzername zur Authentifizierung sollte mit -benutzer=... angegeben werden");
+		}
+		login(_clientDavParameters.getClientCredentials());
+	}
+
+	public final void login(ClientCredentials clientCredentials) throws InconsistentLoginException, CommunicationError { 
 		synchronized(_lock) {
 			if(!_isConnected) {
 				throw new RuntimeException("Datenverteilerverbindung muss vor der Authentifizierung zuerst mit connect() aufgebaut werden.");
@@ -452,17 +481,19 @@ public class ClientDavConnection implements ClientDavInterface {
 			}
 			if(_dataModelConnection != null) {
 				// 2. Verbindung initialisieren
-				_dataModelConnection.login();
+				_dataModelConnection.login(clientCredentials);
 			}
 			if(_highLevelCommunication != null) {
 				ClientConnectionProperties properties = _highLevelCommunication.getConnectionProperties();
-				if(properties.getUserName().equals("")) {
-					throw new IllegalStateException("Benutzername zur Authentifizierung sollte mit -benutzer=... angegeben werden");
+				if(properties.getUserName().isEmpty()) {
+					throw new IllegalStateException("Benutzername zur Authentifizierung sollte mit -benutzer=... angegeben werden.");
 				}
-				if(properties.getUserPassword().equals("")) {
-					throw new IllegalStateException("Passwort zur Authentifizierung sollte in der mit -authentifizierung=... spezifizierten Datei enthalten sein");
+				if(clientCredentials == null) {
+					throw new IllegalStateException("Passwort zur Authentifizierung als \"" + properties.getUserName() + "\" konnte nicht ermittelt werden.");
 				}
-				_highLevelCommunication.connect();
+				
+				_highLevelCommunication.login(clientCredentials);
+				
 				long configurationId = _highLevelCommunication.getConfigurationId();
 				_subscriptionManager = new SubscriptionManager(_clientDavParameters);
 				String applicationName = _clientDavParameters.getApplicationNameForLocalConfigurationCache();
@@ -506,6 +537,11 @@ public class ClientDavConnection implements ClientDavInterface {
 				else {
 					_configurationManager.completeInitialisation(_subscriptionManager);
 				}
+				
+				if(clientCredentials.hasPassword()) {
+					_localVerifier = SrpClientAuthentication.createVerifier(SrpCryptoParameter.getDefaultInstance(), properties.getUserName(), clientCredentials);
+				}
+				
 				_isLoggedIn = true;
 
 				// Auf Meta-Seite wird die Verbindung zur Konfiguration hergestellt
@@ -523,22 +559,54 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	@Override
 	public final void login(String userName, String password) throws InconsistentLoginException, CommunicationError {
+		login(userName, password.toCharArray());
+	}
+
+	@Override
+	public final void login(String userName, final char[] password) throws InconsistentLoginException, CommunicationError {
+		login(userName, ClientCredentials.ofPassword(password));
+	}
+
+	@Override
+	public final void login(String userName, final ClientCredentials clientCredentials) throws InconsistentLoginException, CommunicationError {
+		Matcher matcher = ClientDavParameters.USERNAME_PASSWORD_INDEX_PATTERN.matcher(userName);
+		int passwordIndex = -1;
+		if(matcher.matches()){
+			userName = matcher.group(1);
+			passwordIndex = Integer.parseInt(matcher.group(2));
+		}
+		login(userName, passwordIndex, clientCredentials);
+	}
+	
+	public final void login(String userName, int passwordIndex, ClientCredentials clientCredentials) throws InconsistentLoginException, CommunicationError {
 		synchronized(_lock) {
-			if(userName == null || userName.equals(""))
+			if(userName == null || userName.isEmpty())
 				throw new IllegalArgumentException("Benutzername zur Authentifizierung muss angegeben werden");
-			if(password == null || password.equals(""))
-				throw new IllegalArgumentException("Passwort zur Authentifizierung muss angegeben werden");
+			if(clientCredentials == null)
+				throw new IllegalArgumentException("Passwort oder Login-Token zur Authentifizierung muss angegeben werden");
 			if(_highLevelCommunication != null) {
 				ClientConnectionProperties properties = _highLevelCommunication.getConnectionProperties();
 				properties.setUserName(userName);
-				properties.setUserPassword(password);
+				properties.setPasswordIndex(passwordIndex);
 			}
 			if(_dataModelConnection != null && _dataModelConnection._highLevelCommunication != null) {
-				ClientConnectionProperties properties = _dataModelConnection._highLevelCommunication.getConnectionProperties();
-				properties.setUserName(userName);
-				properties.setUserPassword(password);
+				if(passwordIndex != -1) {
+					_debug.warning("Die zweite Verbindung (-zweiteVerbindung=ja) kann nicht verwendet werden, da ein Einmalpasswort verwendet wird.");
+					
+					// Zweite Verbindung aufräumen
+					_dataModelConnection.removeConnectionListener(_secondConnectionListener);
+					_dataModelConnection.disconnect(false, "");
+					_dataModelConnection = null;
+					
+					_dataModel = new DafDataModel(this);
+				}
+				else {
+					ClientConnectionProperties properties = _dataModelConnection._highLevelCommunication.getConnectionProperties();
+					properties.setUserName(userName);
+					properties.setPasswordIndex(passwordIndex);
+				}
 			}
-			login();
+			login(clientCredentials);
 		}
 	}
 
@@ -1115,11 +1183,13 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	@Override
 	public void unsubscribeReceiver(ClientReceiverInterface receiver, Collection<SystemObject> objects, DataDescription dataDescription) {
+		Objects.requireNonNull(objects, "Argument objects darf nicht null sein");
 		unsubscribeReceiver(receiver, objects.toArray(new SystemObject[objects.size()]), dataDescription);
 	}
 
 	@Override
 	public void unsubscribeReceiver(ClientReceiverInterface receiver, SystemObject object, DataDescription dataDescription) {
+		Objects.requireNonNull(object, "Argument object darf nicht null sein");
 		unsubscribeReceiver(receiver, new SystemObject[]{object}, dataDescription);
 	}
 
@@ -1128,14 +1198,12 @@ public class ClientDavConnection implements ClientDavInterface {
 		if(_subscriptionManager == null) {
 			throw new InitialisationNotCompleteException("Die Datenverteiler-Applikationsfunktionen sind noch nicht initialisiert..");
 		}
-		if((receiver == null) || (objects == null) || (dataDescription == null)) {
-			throw new IllegalArgumentException("Ein Argument ist null");
-		}
-		AttributeGroup attributeGroup = dataDescription.getAttributeGroup();
-		Aspect aspect = dataDescription.getAspect();
-		if((attributeGroup == null) || (aspect == null)) {
-			throw new IllegalArgumentException("Attributgruppe oder Aspekt ist null");
-		}
+		Objects.requireNonNull(receiver, "Argument receiver darf nicht null sein");
+		Objects.requireNonNull(objects, "Argument objects darf nicht null sein");
+		Objects.requireNonNull(dataDescription, "Argument dataDescription darf nicht null sein");
+		AttributeGroup attributeGroup = Objects.requireNonNull(dataDescription.getAttributeGroup(), "dataDescription.getAttributeGroup() darf nicht null sein");
+		Aspect aspect = Objects.requireNonNull(dataDescription.getAspect(), "dataDescription.getAspect() darf nicht null sein");
+
 		Aspect _aspect = aspectToSubstitute(attributeGroup, aspect);
 
 		checkDataIdentification(objects, attributeGroup, _aspect, "Empfangsabmeldung");
@@ -1528,6 +1596,50 @@ public class ClientDavConnection implements ClientDavInterface {
 		return _clientDavRequester.getSubscriptionInfo(davApplication, object, usage, simulationVariant);
 	}
 
+	@Override
+	public EncryptionStatus getEncryptionStatus(){
+		if(_highLevelCommunication != null){
+			return _highLevelCommunication.getEncryptionStatus();
+		}
+		return EncryptionStatus.notEncrypted();
+	}
+
+	@Override
+	public AuthenticationStatus getAuthenticationStatus() {
+		if(isLoggedIn() && _highLevelCommunication != null){
+			return _highLevelCommunication.getAuthenticationStatus();
+		}
+		return AuthenticationStatus.notAuthenticated();
+	}
+
+	/**
+	 * Gibt den Standard-Konfigurationsbereich für den angegebenen dynamischen Typen zurück. Die Methode greift auf den Parameterdatensatz
+	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnng definiert sein,
+	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet
+	 * @param dynamicObjectType Typ 
+	 * @return Default-Bereich in dem Objekte dieses Type angelegt werden (nie null)
+	 */
+	public ConfigurationArea getDefaultConfigurationArea(DynamicObjectType dynamicObjectType) {
+		return getDefaultConfigurationArea(dynamicObjectType, getLocalConfigurationAuthority());
+	}
+
+	/**
+	 * Gibt den Standard-Konfigurationsbereich für den angegebenen dynamischen Typen zurück. Die Methode greift auf den Parameterdatensatz
+	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnng definiert sein,
+	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet
+	 * @param dynamicObjectType Typ 
+	 * @param configurationAuthority Autarke Organisationseinheit
+	 * @return Default-Bereich in dem Objekte dieses Type angelegt werden
+	 */
+	public ConfigurationArea getDefaultConfigurationArea(final DynamicObjectType dynamicObjectType, final ConfigurationAuthority configurationAuthority) {
+		Objects.requireNonNull(dynamicObjectType, "dynamicObjectType ist null");
+		Objects.requireNonNull(configurationAuthority, "configurationAuthority ist null");
+		
+		return _dynamicTypeAreas
+				.computeIfAbsent(configurationAuthority, (authority) -> new DynamicTypeTable(this, authority))
+				.getDefaultArea(dynamicObjectType);
+	}
+
 	/**
 	 * Gibt Informationen über die Datenanmeldungen einer Applikation zurück
 	 *
@@ -1677,16 +1789,16 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	@Override
 	public boolean checkLoggedUserNameAndPassword(String userName, String password) {
-		if(_isLoggedIn) {
+		if(_isLoggedIn && _localVerifier != null) {
 			final ClientConnectionProperties clientConnectionProperties = _highLevelCommunication.getConnectionProperties();
-			if(userName.equals(clientConnectionProperties.getUserName()) && password.equals(clientConnectionProperties.getUserPassword())) return true;
+			if(userName.equals(clientConnectionProperties.getUserName())){
+				if(SrpClientAuthentication.validateVerifier(_localVerifier, userName, ClientCredentials.ofPassword(password.toCharArray()))){
+					_throttler.trigger(false);
+					return true;
+				}
+			}
 		}
-		try {
-			Thread.sleep(3000);
-		}
-		catch(InterruptedException e) {
-			throw new UnsupportedOperationException("nicht implementiert");
-		}
+		_throttler.trigger(true);
 		return false;
 	}
 

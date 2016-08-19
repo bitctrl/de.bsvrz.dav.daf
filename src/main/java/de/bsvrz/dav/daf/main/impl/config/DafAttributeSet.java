@@ -28,11 +28,14 @@
 
 package de.bsvrz.dav.daf.main.impl.config;
 
-import de.bsvrz.dav.daf.main.config.AttributeSet;
 import de.bsvrz.dav.daf.main.config.Attribute;
+import de.bsvrz.dav.daf.main.config.AttributeSet;
 import de.bsvrz.dav.daf.main.config.ObjectSet;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.TreeMap;
 
 /**
  * Klasse, die den Zugriff auf Attributmengen seitens der Datenverteiler-Applikationsfunktionen ermöglicht.

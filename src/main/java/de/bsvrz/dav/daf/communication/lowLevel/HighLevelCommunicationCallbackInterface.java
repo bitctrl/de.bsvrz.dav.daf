@@ -26,8 +26,8 @@
 
 package de.bsvrz.dav.daf.communication.lowLevel;
 
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.DataTelegram;
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.SendDataObject;
+import de.bsvrz.dav.daf.communication.lowLevel.telegrams.DataTelegram;
 
 /**
  * Schnittstelle mit der Informationen der unteren Kommunikationsschicht an eine höhere Kommunikationsschicht weitergegeben werden.

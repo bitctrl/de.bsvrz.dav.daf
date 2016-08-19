@@ -28,8 +28,8 @@
 
 package de.bsvrz.dav.daf.communication.hmacmd5;
 
-import de.bsvrz.sys.funclib.crypt.EncryptDecryptProcedure;
 import de.bsvrz.dav.daf.communication.lowLevel.AuthentificationProcess;
+import de.bsvrz.sys.funclib.crypt.EncryptDecryptProcedure;
 
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;

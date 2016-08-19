@@ -25,9 +25,9 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import de.bsvrz.dav.daf.main.archive.TimingType;
 import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
 import de.bsvrz.dav.daf.main.archive.ArchiveInformationResult;
+import de.bsvrz.dav.daf.main.archive.TimingType;
 
 /**
  * Ein Objekt dieser Klasse enthält Informationen darüber welche Zeitbereiche/Indexbereiche sich im direkten Zugriff des

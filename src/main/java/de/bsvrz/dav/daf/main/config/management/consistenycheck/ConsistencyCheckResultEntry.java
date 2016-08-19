@@ -29,7 +29,8 @@ package de.bsvrz.dav.daf.main.config.management.consistenycheck;
 import de.bsvrz.dav.daf.main.config.ConfigurationArea;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Kommt es bei einer Konsistenzprüfung zu einem "lokalen Fehler" oder "Interferenzfehler" oder zu einer "Warnung", sammelt dieses Objekt alle Informationen,

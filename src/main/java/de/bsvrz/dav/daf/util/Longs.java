@@ -55,6 +55,7 @@ public class Longs {
 	}
 
 	public static long[] asArray(final Collection<Long> longs) {
+		if(longs == null) return null;
 		long[] result = new long[longs.size()];
 		int i = 0;
 		for(Long l : longs) {

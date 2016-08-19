@@ -35,7 +35,8 @@ import de.bsvrz.dav.daf.main.impl.subscription.CollectingReceiver;
 import de.bsvrz.dav.daf.main.impl.subscription.CollectingReceiverManager;
 import de.bsvrz.dav.daf.main.impl.subscription.ReceiverSubscription;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Kappich Systemberatung

@@ -29,12 +29,8 @@
 package de.bsvrz.dav.daf.main.impl.config;
 
 
-import de.bsvrz.dav.daf.main.config.Aspect;
-import de.bsvrz.dav.daf.main.config.AttributeGroupUsage;
-import de.bsvrz.dav.daf.main.config.ObjectSet;
-import de.bsvrz.dav.daf.main.config.SystemObject;
+import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.sys.funclib.debug.Debug;
-import de.bsvrz.dav.daf.main.config.AttributeGroup;
 
 import java.util.*;
 

@@ -47,7 +47,7 @@ public class AuthentificationTextRequest extends DataTelegram {
 	/** Die PID der Applikationstyp */
 	private String applicationTypePid;
 
-	/** Die PID der Konfiguration */
+	/** Die PID und ID des Konfigurationsverantwortlichen (durch einen Doppelpunkt getrennt) */
 	private String configurationPid;
 
 	public AuthentificationTextRequest() {
@@ -58,7 +58,7 @@ public class AuthentificationTextRequest extends DataTelegram {
 	/**
 	 * @param _applicationName      Applikationsname
 	 * @param _applicationTypePid   PID des Applikationstypen
-	 * @param _configurationPid     PID der Konfiguration
+	 * @param _configurationPid     Die PID und ID des Konfigurationsverantwortlichen (durch einen Doppelpunkt getrennt)
 	 */
 	public AuthentificationTextRequest(String _applicationName, String _applicationTypePid, String _configurationPid) {
 		type = AUTHENTIFICATION_TEXT_REQUEST_TYPE;
@@ -107,7 +107,7 @@ public class AuthentificationTextRequest extends DataTelegram {
 	/**
 	 * Ermittelt die Pid der Konfiguration
 	 *
-	 * @return PID der Konfiguration
+	 * @return Die PID und ID des Konfigurationsverantwortlichen (durch einen Doppelpunkt getrennt)
 	 */
 	public final String getConfigurationPid() {
 		return configurationPid;

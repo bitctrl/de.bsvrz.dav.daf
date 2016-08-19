@@ -25,17 +25,17 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import de.bsvrz.dav.daf.main.impl.archive.ArchiveDataCompression;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKind;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
+import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.DataState;
 import de.bsvrz.dav.daf.main.archive.ArchiveData;
+import de.bsvrz.dav.daf.main.archive.ArchiveDataKind;
+import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
 import de.bsvrz.dav.daf.main.archive.ArchiveDataStream;
+import de.bsvrz.dav.daf.main.impl.archive.ArchiveDataCompression;
+import de.bsvrz.sys.funclib.communicationStreams.StreamDemultiplexer;
 import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
 import de.bsvrz.sys.funclib.dataSerializer.NoSuchVersionException;
 import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
-import de.bsvrz.dav.daf.main.Data;
-import de.bsvrz.sys.funclib.communicationStreams.StreamDemultiplexer;
 import de.bsvrz.sys.funclib.debug.Debug;
 
 import java.io.ByteArrayInputStream;

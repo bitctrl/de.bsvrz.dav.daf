@@ -46,15 +46,15 @@ import java.util.*;
  * "son", "Sonntag", usw., Groß- und Kleinschreibung ist unerheblich.
  * <p>
  * Beispiele:<br/>
- * <code><pre>
- * Min    Std  Tag  Mon   WT
- * &nbsp;&nbsp;5      0    *    *    *    Jeden Tag um 00:05:00
- * &nbsp;15  14,20    1    *    *    Am 1. jeden Monats um 14:15:00 und um 20:15:00
- * &nbsp;&nbsp;0     22    *    *  1-5    An jedem Werktag (Mo-Fr) um 22:00:00
- * &nbsp;23  * / 2    *    *    *    Alle 2 Stunden um jeweils xx:23:00, also 00:23:00, 02:23:00, ...
- * &nbsp;&nbsp;5      4    *    *  son    Jeden Sonntag um 04:05:00
- * &nbsp;&nbsp;0      1    1   12    1    Jeden 1. Dezember UND jeden Montag im Dezember jeweils um 01:00:00
- * </pre></code>
+ * 
+ *      Min    Std  Tag  Mon   WT
+ *        5      0    *    *    *    Jeden Tag um 00:05:00
+ *       15  14,20    1    *    *    Am 1. jeden Monats um 14:15:00 und um 20:15:00
+ *        0     22    *    *  1-5    An jedem Werktag (Mo-Fr) um 22:00:00
+ *       23  * / 2    *    *    *    Alle 2 Stunden um jeweils xx:23:00, also 00:23:00, 02:23:00, ...
+ *        5      4    *    *  son    Jeden Sonntag um 04:05:00
+ *        0      1    1   12    1    Jeden 1. Dezember UND jeden Montag im Dezember jeweils um 01:00:00
+ * 
  * <p>
  * Für weitere Erklärungen und Beispiele siehe Dokumentation der /etc/crontab oder https://de.wikipedia.org/wiki/Cron
  *
@@ -75,9 +75,16 @@ public final class CronDefinition {
 		}
 	};
 	private final String[] _segments;
+	
+	public static final CronDefinition EVERY_MINUTE = new CronDefinition("* * * * *");
+	public static final CronDefinition EVERY_HOUR = new CronDefinition("0 * * * *");
+	public static final CronDefinition EVERY_DAY = new CronDefinition("0 0 * * *");
+	public static final CronDefinition EVERY_WEEK = new CronDefinition("0 0 * * 1");
+	public static final CronDefinition EVERY_MONTH = new CronDefinition("0 0 1 * *");
+	public static final CronDefinition EVERY_YEAR = new CronDefinition("0 0 1 1 *");
 
 	/**
-	 * Erstellt eien neue Cron-Definition zum periodischen Ausführen von Aufgaben. Diese Klasse dient nur zum Festlegen der Zeitpunkte.
+	 * Erstellt eine neue Cron-Definition zum periodischen Ausführen von Aufgaben. Diese Klasse dient nur zum Festlegen der Zeitpunkte.
 	 * Zum Planen von Aufgaben bitte {@link de.bsvrz.dav.daf.util.cron.CronScheduler#schedule(Runnable, CronDefinition)} verwenden.
 	 *
 	 * @param definition Definition, siehe Dokumentation von {@link de.bsvrz.dav.daf.util.cron.CronDefinition}. Beispiel: "* * * * *"

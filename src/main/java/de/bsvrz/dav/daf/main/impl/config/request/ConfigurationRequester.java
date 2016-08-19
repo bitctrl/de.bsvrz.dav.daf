@@ -31,6 +31,7 @@ import de.bsvrz.dav.daf.main.CommunicationError;
 import de.bsvrz.dav.daf.main.DataAndATGUsageInformation;
 import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.main.config.management.ConfigAreaAndVersion;
+import de.bsvrz.dav.daf.main.config.management.UserAdministration;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultInterface;
 
 import java.io.File;
@@ -288,7 +289,7 @@ public interface ConfigurationRequester {
 	public boolean isUserAdmin(String orderer, String ordererPassword, String username) throws ConfigurationTaskException;
 
 	/**
-	 * Prüft, ob ein angegebener Benutzername gültig ist, d.h. ob er ein zugeordnetes Systemobjekt und einen Eintrag in der Benutzerverwaltung.xml hat. Jeder
+	 * Prüft, ob ein angegebener Benutzername gültig ist, d.h. ob er ein zugeordnetes Systemobjekt und einen Eintrag in der benutzerverwaltung.xml hat. Jeder
 	 * Benutzer kann diese Aktion ausführen. Zur (verschlüsselten) Übertragung des Vorgangs ist dennoch die Angabe eines gültigen Benutzernamens und Passworts
 	 * notwendig. Mit dieser Funktion kann geprüft werden, ob die Benutzernamen, die {@link #subscribeUserChangeListener(de.bsvrz.dav.daf.main.config.MutableCollectionChangeListener)
 	 * } liefert, tatsächlichen zu einem gültigen Benutzer gehören, da subscribeUserChangeListener nur die Systemobjekte berücksichtigt.
@@ -308,7 +309,7 @@ public interface ConfigurationRequester {
 	 * Erstellt einen Listener der Änderungen an den Benutzern überwacht und eine aktuelle Liste aller Benutzer zurückgibt
 	 * @param listener Objekt, an das Rückmeldungen gesendet werden sollen. <code>null</code>, wenn nur die Liste der aktuellen Benutzer geholt werden soll.
 	 * @return Liste der aktuell vorhandenen Benutzer. Es ist eventuell ratsam, mit isUserValid zu prüfen, ob die Benutzer tatsächlich in der
-	 * Benutzerverwaltung.xml abgelegt sind, da hier nur die Systemobjekte berücksichtigt werden.
+	 * benutzerverwaltung.xml abgelegt sind, da hier nur die Systemobjekte berücksichtigt werden.
 	 */
 	public List<SystemObject> subscribeUserChangeListener(MutableCollectionChangeListener listener);
 
@@ -869,4 +870,6 @@ public interface ConfigurationRequester {
 	 * @throws RequestException Technisches Problem bei der Übertragung Anfrage
 	 */
 	void setName(SystemObject object, String name) throws ConfigurationChangeException, RequestException;
+
+	UserAdministration getUserAdministration();
 }

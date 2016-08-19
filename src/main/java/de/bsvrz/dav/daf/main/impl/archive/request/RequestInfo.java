@@ -29,14 +29,7 @@ import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.DataNotSubscribedException;
 import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKindCombination;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
-import de.bsvrz.dav.daf.main.archive.ArchiveInfoQueryResult;
-import de.bsvrz.dav.daf.main.archive.ArchiveInformationResult;
-import de.bsvrz.dav.daf.main.archive.ArchiveOrder;
-import de.bsvrz.dav.daf.main.archive.ArchiveRequestOption;
-import de.bsvrz.dav.daf.main.archive.ArchiveTimeSpecification;
-import de.bsvrz.dav.daf.main.archive.TimingType;
+import de.bsvrz.dav.daf.main.archive.*;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
@@ -49,7 +42,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Diese Klasse stellt ein Objekt zur Verfügung, über das eine Archivinformationsanfrage gestartet werden kann.

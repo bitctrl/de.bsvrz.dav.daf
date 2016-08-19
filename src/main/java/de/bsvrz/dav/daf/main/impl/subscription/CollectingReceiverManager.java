@@ -33,7 +33,7 @@ import de.bsvrz.dav.daf.main.ResultData;
 import de.bsvrz.sys.funclib.concurrent.UnboundedQueue;
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.util.*;
+import java.util.HashMap;
 
 /**
  * Verwaltet alle CollectingReceiver Objekte für noch angemeldete Receiver der Applikation.

@@ -27,19 +27,7 @@
 package de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeDefinitionInfo;
-import de.bsvrz.dav.daf.main.config.AttributeSet;
-import de.bsvrz.dav.daf.main.config.AttributeType;
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.config.DoubleAttributeType;
-import de.bsvrz.dav.daf.main.config.IntegerAttributeType;
-import de.bsvrz.dav.daf.main.config.IntegerValueState;
-import de.bsvrz.dav.daf.main.config.ReferenceAttributeType;
-import de.bsvrz.dav.daf.main.config.StringAttributeType;
-import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.config.TimeAttributeType;
-
-import java.util.*;
+import de.bsvrz.dav.daf.main.config.*;
 
 /**
  * Klasse, die noch zu dokumentieren ist.
@@ -48,25 +36,15 @@ import java.util.*;
  * @version $Revision$ / $Date$ / ($Author$)
  */
 public abstract class AbstractAttributeDefinitionInfo implements AttributeDefinitionInfo {
-	private static final Map<AttributeSet, AttributeDefinitionInfo> _AttributSet2InfoMap = new IdentityHashMap<AttributeSet, AttributeDefinitionInfo>();
-	private static final Map<AttributeType, AttributeDefinitionInfo> _AttributType2DefinitionInfoMap = new IdentityHashMap<AttributeType, AttributeDefinitionInfo>();
+	private static final SystemObjectCache<AttributeSet, AttributeDefinitionInfo> _AttributSet2InfoMap = new SystemObjectCache<AttributeSet, AttributeDefinitionInfo>();
+	private static final SystemObjectCache<AttributeType, AttributeDefinitionInfo> _AttributType2DefinitionInfoMap = new SystemObjectCache<AttributeType, AttributeDefinitionInfo>();
 
 	public static void forgetDataModel(DataModel dataModel) {
 		synchronized(_AttributSet2InfoMap) {
-			List<AttributeSet> attributeSets = new ArrayList<AttributeSet>(_AttributSet2InfoMap.keySet());
-			for(AttributeSet attributeSet : attributeSets) {
-				if(attributeSet.getDataModel() == dataModel) {
-					_AttributSet2InfoMap.remove(attributeSet);
-				}
-			}
+			_AttributSet2InfoMap.forgetDataModel(dataModel);
 		}
 		synchronized(_AttributType2DefinitionInfoMap) {
-			List<AttributeType> attributeTypes = new ArrayList<AttributeType>(_AttributType2DefinitionInfoMap.keySet());
-			for(AttributeType attributeType : attributeTypes) {
-				if(attributeType.getDataModel() == dataModel) {
-					_AttributType2DefinitionInfoMap.remove(attributeType);
-				}
-			}
+			_AttributType2DefinitionInfoMap.forgetDataModel(dataModel);
 		}
 	}
 

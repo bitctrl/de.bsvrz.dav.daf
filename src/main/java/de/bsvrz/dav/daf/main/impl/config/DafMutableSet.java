@@ -28,15 +28,9 @@
 
 package de.bsvrz.dav.daf.main.impl.config;
 
-import de.bsvrz.dav.daf.main.config.ConfigurationChangeException;
-import de.bsvrz.dav.daf.main.config.ConfigurationCommunicationChangeListener;
-import de.bsvrz.dav.daf.main.config.MutableSetChangeListener;
-import de.bsvrz.dav.daf.main.config.SystemObject;
+import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.main.impl.config.request.ConfigurationRequester;
 import de.bsvrz.dav.daf.main.impl.config.request.RequestException;
-import de.bsvrz.dav.daf.main.config.MutableSet;
-import de.bsvrz.dav.daf.main.config.MutableCollectionChangeListener;
-import de.bsvrz.dav.daf.main.config.MutableCollection;
 import de.bsvrz.sys.funclib.debug.Debug;
 
 import java.util.*;
@@ -96,7 +90,28 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 			short validToVersionNumber,
 			long responsibleObjectId,
 			long[] setIds,
-			ArrayList setElementIds
+			ArrayList<Long> setElementIds
+	) {
+		super(id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds, setElementIds);
+		_internType = MUTABLE_SET;	// "Dynamische Menge"
+		_configuration = dataModel;
+		_configComSupport = new DafConfigurationCommunicationListenerSupport(this);
+	}
+	
+	/** Erzeugt ein Objekt einer dynamischen Menge. */
+	public DafMutableSet(
+			long id,
+			String pid,
+			String name,
+			long typId,
+			byte state,
+			String error,
+			DafDataModel dataModel,
+			short validFromVersionNumber,
+			short validToVersionNumber,
+			long responsibleObjectId,
+			long[] setIds,
+			long[] setElementIds
 	) {
 		super(id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds, setElementIds);
 		_internType = MUTABLE_SET;	// "Dynamische Menge"
@@ -122,7 +137,7 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 	 *
 	 * @return die Elemente, die zum angegebenen Zeitpunkt in der dynamischen Menge sind
 	 */
-	public List getElements(long time) {
+	public List<SystemObject> getElements(long time) {
 		return getElements(time, time, false);
 	}
 
@@ -134,7 +149,7 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 	 *
 	 * @return die Elemente, die innerhalb des angegebenen Zeitraumes in der dynamischen Menge sind bzw. waren
 	 */
-	public List getElementsInPeriod(long startTime, long endTime) {
+	public List<SystemObject> getElementsInPeriod(long startTime, long endTime) {
 		return getElements(startTime, endTime, false);
 	}
 
@@ -146,7 +161,7 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 	 *
 	 * @return die Elemente, die während des gesamten Zeitraums in der dynamischen Menge waren
 	 */
-	public List getElementsDuringPeriod(long startTime, long endTime) {
+	public List<SystemObject> getElementsDuringPeriod(long startTime, long endTime) {
 		return getElements(startTime, endTime, true);
 	}
 
@@ -159,7 +174,7 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 	 *
 	 * @return die Elemente in der dynamischen Menge oder eine leere Liste
 	 */
-	private List getElements(long startTime, long endTime, boolean validDuringEntirePeriod) {
+	private List<SystemObject> getElements(long startTime, long endTime, boolean validDuringEntirePeriod) {
 		SystemObject[] objects = null;
 		try {
 			if(_requester == null) _requester = _configuration.getRequester();
@@ -169,7 +184,7 @@ public class DafMutableSet extends DafObjectSet implements MutableSet {
 			_debug.error("Fehler führt zum Beenden der Verbindung zum Datenverteiler", ex);
 			_configuration.getConnection().disconnect(true, ex.getMessage());
 		}
-		return (objects != null ? Arrays.asList(objects) : new LinkedList());
+		return (objects != null ? Arrays.asList(objects) : Collections.emptyList());
 	}
 
 	/**

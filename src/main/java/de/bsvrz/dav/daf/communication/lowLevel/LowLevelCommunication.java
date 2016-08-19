@@ -30,24 +30,20 @@
 package de.bsvrz.dav.daf.communication.lowLevel;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.SendDataObject;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.ApplicationDataTelegram;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.DataTelegram;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.KeepAliveTelegram;
+import de.bsvrz.dav.daf.communication.lowLevel.telegrams.*;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpTelegramEncryption;
 import de.bsvrz.dav.daf.main.ConnectionException;
+import de.bsvrz.dav.daf.main.EncryptionStatus;
 import de.bsvrz.dav.daf.main.impl.CommunicationConstant;
 import de.bsvrz.dav.daf.main.impl.config.AttributeGroupUsageIdentifications;
 import de.bsvrz.sys.funclib.debug.Debug;
 import de.bsvrz.sys.funclib.hexdump.HexDumper;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Klasse zur Verwaltung der unteren Ebene von Datenverteilerverbindungen.
@@ -156,6 +152,8 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 	private String _remoteName = "";
 
 	private String _remoteAddress = "[-:-]";
+	
+	private volatile SrpTelegramEncryption _encryption = null;
 
 	/**
 	 * @param connection              Verbindungsobjekt über dass die Kommunikation mit dem Kommunikationspartner realisiert wird.
@@ -353,6 +351,7 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		}
 	}
 
+
 	/**
 	 * Diese Methode wird von der Protokollschicht DaV-DAF aufgerufen, wenn die Kommunikationskanäle geschlossen werden sollen.
 	 * <p>
@@ -505,6 +504,32 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 	private String getRemotePrefix() {
 		return _remotePrefix;
 	}
+	
+	@Override
+	public void enableEncryption(SrpTelegramEncryption encryption){
+		synchronized(_outStream) {
+			_encryption = encryption;
+		}
+	}
+
+	@Override
+	public void disableEncryption() {
+		synchronized(_outStream) {
+			_encryption = null;
+		}
+	}
+
+	@Override
+	public EncryptionStatus getEncryptionStatus() {
+		SrpTelegramEncryption encryption = _encryption;
+		if(encryption == null){
+			return EncryptionStatus.notEncrypted();
+		}
+		else {
+			return EncryptionStatus.encrypted(encryption.getCipherName());
+		}
+	}
+
 
 	/**
 	 * Dieser Thread verschickt Telegramme mittels einer Datenverteilerverbindung (Outputstream der Verbindung). Der Thread synchronisiert sich auf der
@@ -520,21 +545,21 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		public final void run() {
 			_debug.fine(getRemotePrefix() + "Thread LowLevelCommunication.SendingChannel startet");
 			try {
-				DataTelegram telegram = null;
-				while(!interrupted() && (telegram = _sendQueue.take()) != null) {
-					synchronized(_outStream) {
-//						_debug.info(">>>>>Telegram wird gesendet", telegram);
-						_outStream.writeByte(telegram.getType());
-						telegram.write(_outStream);
-						_outStream.flush();
-					}
-					_keepAliveThread.sentTelegram();
-					_throughputChecker.sentTelegram(telegram.getSize());
+				ArrayList<DataTelegram> telegrams = new ArrayList<>();
+				while(!interrupted() && _sendQueue.takeMultiple(_encryption == null ? 0 : CommunicationConstant.MAX_SPLIT_THRESHOLD, telegrams) != -1) {
+					sendDirect(telegrams);
 				}
 				if(_terminationTelegram != null) {
 					_debug.info(getRemotePrefix() + Thread.currentThread().getName() + " sendet ein Terminierungstelegramm, weil die Sende-Queue geschlossen wurde");
-					_outStream.writeByte(_terminationTelegram.getType());
-					_terminationTelegram.write(_outStream);
+					if(_encryption == null) {
+						_outStream.writeByte(_terminationTelegram.getType());
+						_terminationTelegram.write(_outStream);
+					}
+					else {
+						EncryptedTelegram encryptedTelegram = new EncryptedTelegram(_encryption, Collections.singleton(_terminationTelegram));
+						_outStream.writeByte(encryptedTelegram.getType());
+						encryptedTelegram.write(_outStream);
+					}
 					_outStream.flush();
 				}
 				_debug.info(getRemotePrefix() + Thread.currentThread().getName() + " beendet sich jetzt weil die Sende-Queue geschlossen wurde");
@@ -559,6 +584,41 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		}
 	}
 
+	@Override
+	public void sendDirect(final DataTelegram telegram) {
+		sendDirect(Collections.singleton(telegram));
+	}
+
+	@Override
+	public void sendDirect(final Collection<DataTelegram> telegrams) {
+		try {
+			int size = 0;
+			synchronized(_outStream) {
+				if(_encryption == null) {
+					for(DataTelegram telegram : telegrams) {
+						_outStream.writeByte(telegram.getType());
+						telegram.write(_outStream);
+						size += telegram.getSize();
+					}
+				}
+				else {
+					EncryptedTelegram encryptedTelegram = new EncryptedTelegram(_encryption, telegrams);
+					_outStream.writeByte(encryptedTelegram.getType());
+					encryptedTelegram.write(_outStream);
+					size += encryptedTelegram.getSize();
+				}
+				_outStream.flush();
+			}
+			_keepAliveThread.sentTelegram();
+			_throughputChecker.sentTelegram(size);
+		}
+		catch(IOException ex) {
+			handleAbnormalBehaviour(
+					false, "Verbindung wird wegen eines Kommunikationsfehlers beim Senden terminiert: " + ex.getMessage()
+			);
+		}
+	}
+
 	class ReceivingChannel extends LowLevelThread {
 
 		private ReceivingChannel() {
@@ -573,7 +633,7 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		 * @throws IOException              Wenn beim Lesen Fehler aufgetreten sind.
 		 * @throws IllegalArgumentException Wenn ein Telegramm mit einem unbekannten Typ empfangen wurde
 		 */
-		private DataTelegram readNextTelegram() throws IOException {
+		private Collection<DataTelegram> readNextTelegrams() throws IOException {
 			byte type = _inStream.readByte();
 			DataTelegram telegram = DataTelegram.getTelegram(type);
 			if(telegram == null) {
@@ -584,7 +644,34 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 				throw new IllegalArgumentException(getRemotePrefix() + "Telegramm mit unbekanntem Typ empfangen: " + type);
 			}
 			telegram.read(_inStream);
-			return telegram;
+			if(telegram.getType() == DataTelegram.ENCRYPTED_TYPE) {
+				waitForEncryption();
+			}
+			SrpTelegramEncryption encryption = _encryption;
+			if(encryption == null) {
+				return Collections.singleton(telegram);
+			}
+			else {
+				if(telegram.getType() == DataTelegram.ENCRYPTED_TYPE){
+					EncryptedTelegram encryptedTelegram = (EncryptedTelegram) telegram;
+					return encryptedTelegram.getTelegrams(encryption);
+				}
+				else {
+					// Unverschlüsselte Telegramme werden bei bestehender Verschlüsselung nicht zugelassen!
+					if(telegram.getType() == DataTelegram.KEEP_ALIVE_TYPE){
+						// Unverschlüsselte Keep-Alive-Telegramme ignorieren, da diese nichtdeterministisch versendet werden
+						// und damit eine Seite bereits Verschlüsselung verwenden kann während das die andere Seite noch nicht tut
+						return Collections.singleton(telegram);
+					}
+					// Unverschlüsseltes Telegramm bei bestehender Verschlüsselung empfangen
+					
+					// Vielleicht wird die Verschlüsselung gerade abgebaut, kurz warten
+					waitForNoEncryption(); // Wirft exception falls nach kurzer Zeit nicht abgebaut
+					
+					// Falls doch abgebaut, Telegramm zurückgeben
+					return Collections.singleton(telegram);
+				}
+			}
 		}
 
 		/**
@@ -634,10 +721,12 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 					}
 					try {
 						_keepAliveThread.startReceiving();
-						DataTelegram telegram = readNextTelegram();
-						_keepAliveThread.receivedTelegram();
-						if(handleWithoutQueueing(telegram)) continue;
-						_receiveQueue.put(telegram);
+						Collection<DataTelegram> telegrams = readNextTelegrams();
+						for(DataTelegram telegram : telegrams) {
+							_keepAliveThread.receivedTelegram();
+							if(handleWithoutQueueing(telegram)) continue;
+							_receiveQueue.put(telegram);
+						}
 					}
 					catch(EOFException ex) {
 						_debug.fine(getRemotePrefix() + "EOFException beim Lesen eines Telegramms", ex);
@@ -674,6 +763,41 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		@Override
 		public LowLevelCommunication getLowLevelCommunication() {
 			return LowLevelCommunication.this;
+		}
+	}
+
+
+	private void waitForEncryption() throws IOException {
+		final long start = System.nanoTime();
+		while(_encryption == null){
+			// Warten, bis das Telegramm, mit dem die Verschlüsselung aktiviert wird durch den Worker-Thread durch ist
+			// Sollte nicht lange dauern, da die Verbindung gerade aufgebaut wird und die Queues leer sein sollten
+			try {
+				Thread.sleep(10);
+			}
+			catch(InterruptedException ignored) {
+				return;
+			}
+			if(_encryption == null && TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start) > CommunicationConstant.MAX_WAITING_TIME_FOR_SYNC_RESPONCE){
+				throw new IOException("Verschlüsseltes Telegramm erhalten, aber keine Verschlüsselung aktiv.");
+			}
+		}
+	}	
+	
+	private void waitForNoEncryption() throws IOException {
+		final long start = System.nanoTime();
+		while(_encryption != null){
+			// Warten, bis das Telegramm, mit dem die Verschlüsselung deaktiviert wird durch den Worker-Thread durch ist
+			// Sollte nicht lange dauern, da die Verbindung gerade abgebaut wird und die Queues leer sein sollten
+			try {
+				Thread.sleep(10);
+			}
+			catch(InterruptedException ignored) {
+				return;
+			}
+			if(_encryption != null && TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start) > CommunicationConstant.MAX_WAITING_TIME_FOR_SYNC_RESPONCE){
+				throw new IOException("Unverschlüsseltes Telegramm bei bestehender Verschlüsselung empfangen.");
+			}
 		}
 	}
 
@@ -724,19 +848,22 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 		/** Anzahl Bytes im Sendepuffer, ab dem die Durchsatzprüfung gestartet wird. */
 		private int _buffersizeThreshold;
 
-		/** Die Zeit zwischen zwei Messungen der Durchsatzprüfung in Millisekunden */
+		/** Die Zeit zwischen zwei Messungen der Durchsatzprüfung in Nanosekunden */
 		private long _controlInterval;
 
 		/** Minimaler Sendedurchsatz für die Durchsatzprüfung in Bytes pro Sekunde */
 		private int _minimumThroughput;
 
-		ThroughputCheckerState _state;
+		/** Aktueller Zustand */
+		private ThroughputCheckerState _state;
 
+		/** Der Zeitpunkt in Nanosekunden bei der letzten Zustandsänderung */
 		private long _stateChangeTime;
 
+		/** Die Anzahl gesendeter Bytes seit der letzten Zustandsänderung */
+		private long _numberOfBytesSent;
 
-		private int _numberOfBytesSent;
-
+		/** Der letzte Durchsatz in Bytes/s */
 		private long _lastCheckedThroughput;
 
 		public ThroughputChecker() {
@@ -767,7 +894,7 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 			if(throughputControlSendBufferFactor >= 1.0) {
 				throw new IllegalArgumentException(getRemotePrefix() + "Pufferfüllgrad für Durchsatzprüfung ist zu groß: " + throughputControlSendBufferFactor);
 			}
-			_buffersizeThreshold = (int)(throughputControlSendBufferFactor * _sendQueue.getCapacity());
+			_buffersizeThreshold = Math.max(1, (int)(throughputControlSendBufferFactor * _sendQueue.getCapacity()));
 			_controlInterval = throughputControlInterval * 1000000;
 			_minimumThroughput = minimumThroughput;
 		}
@@ -841,11 +968,12 @@ public class LowLevelCommunication implements LowLevelCommunicationInterface {
 					if(checkingTimeout > 0) {
 						return checkingTimeout;
 					}
-					final long throughput = (long)(_numberOfBytesSent / (checkingTime / 1000000000.0));
+					long checkingTimeMillis = TimeUnit.NANOSECONDS.toMillis(checkingTime);
+					long throughput = (1000 * _numberOfBytesSent) / checkingTimeMillis;
 					_debug.info(getRemotePrefix() + "Sendedurchsatz: " + throughput + " Byte/s");
 					if(throughput < _minimumThroughput) {
 						_lastCheckedThroughput = throughput;
-						throw new IllegalStateException(getRemotePrefix() + "Sendedurchsatz war in den letzten " + checkingTime / 1000000 + " ms zu gering: " + throughput + " Byte/s");
+						throw new IllegalStateException(getRemotePrefix() + "Sendedurchsatz war in den letzten " + checkingTimeMillis + " ms zu gering: " + throughput + " Byte/s");
 					}
 					setState(ThroughputCheckerState.CHECKING_THROUGHPUT);
 					_lastCheckedThroughput = throughput;

@@ -29,17 +29,15 @@ package de.bsvrz.dav.daf.main.impl.config.request;
 import de.bsvrz.dav.daf.main.*;
 import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.main.config.management.ConfigAreaAndVersion;
+import de.bsvrz.dav.daf.main.config.management.UserAdministration;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResult;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultEntry;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultEntryType;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultInterface;
 import de.bsvrz.dav.daf.main.impl.config.DafDataModel;
-import de.bsvrz.dav.daf.main.impl.config.DafDynamicObjectType;
 import de.bsvrz.dav.daf.main.impl.config.DafSerializerUtil;
 import de.bsvrz.dav.daf.main.impl.config.DafSystemObject;
 import de.bsvrz.dav.daf.main.impl.config.request.telegramManager.*;
-import de.bsvrz.sys.funclib.crypt.EncryptDecryptProcedure;
-import de.bsvrz.sys.funclib.crypt.encrypt.EncryptFactory;
 import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
 import de.bsvrz.sys.funclib.dataSerializer.NoSuchVersionException;
 import de.bsvrz.sys.funclib.dataSerializer.Serializer;
@@ -61,8 +59,6 @@ class RemoteRequester implements ConfigurationRequester {
 	
 	protected final DataModel _localConfiguration;
 	private final ConfigurationAuthority _configurationAuthority;
-
-	private EncryptDecryptProcedure _encryptDecryptProcedure = EncryptDecryptProcedure.PBEWithMD5AndDES;
 
 	/**
 	 * Objekt, das Konfigurationsanfragen stellt und die Antwort der Konfigurations verarbeitet und zur Verfügung stellt. Es werden nur Konfigurationsanfragen
@@ -86,6 +82,9 @@ class RemoteRequester implements ConfigurationRequester {
 	protected final ClientDavInterface _connection;
 
 	private int _systemModelVersion;
+	
+	/** Implementierung der Benutzerverwaltung */
+	private UserAdministration _userAdministration;
 
 	public RemoteRequester(
 			ClientDavInterface connection, DataModel localConfiguration, ConfigurationAuthority configurationAuthority
@@ -113,12 +112,22 @@ class RemoteRequester implements ConfigurationRequester {
 			_senderWriteConfigObjects = new ConfigurationRequestWriteData(_connection, _configurationAuthority, localApplication);
 
 			_senderUserAdministration = new ConfigurationRequestUserAdministration(_connection, _configurationAuthority, localApplication);
+			
 			_senderConfigAreaTask = new ConfigurationRequestArea(_connection, _configurationAuthority, localApplication);
 
-			
+			if(dataModel instanceof DafDataModel) {
+				DafDataModel dafDataModel = (DafDataModel) dataModel;
+				if(canUseSrpAdministration(dafDataModel)) {
+					_userAdministration = new SrpUserAdministration(_connection, _senderUserAdministration, _connection.getClientDavParameters().isSelfClientDavConnection());
+				}
+				else {
+					_userAdministration = new HmacUserAdministration(_connection, _senderUserAdministration);
+				}
+			}
+
 			// Wenn inzwischen die Datenverteilerkommunikation terminiert wurde, bleibt der folgende Aufruf sendDummyQuery() hängen
 			// da keine Sendesteuerung stattfindet un der ConnectionListener innerhalb von AbstractSenderReceiverCommunication
-			// nicht in jedem Fall die Trennugn der Verbindung angezeigt hat. (Anmeldung des Listeners erst in den
+			// nicht in jedem Fall die Trennung der Verbindung angezeigt hat. (Anmeldung des Listeners erst in den
 			// Konstruktoren von "new ConfigurationRequestReadData" usw. Also hier nochmal prüfen, ob überhaupt verbunden.
 			if(dataModel instanceof DafDataModel) {
 				DafDataModel dafDataModel = (DafDataModel) dataModel;
@@ -146,6 +155,25 @@ class RemoteRequester implements ConfigurationRequester {
 			oneSubscriptionPerSendData.printStackTrace();
 			_debug.error("Anmeldung für Konfigurationsanfragen fehlgeschlagen", oneSubscriptionPerSendData);
 			throw new RuntimeException(oneSubscriptionPerSendData);
+		}
+	}
+
+	private boolean canUseSrpAdministration(final DafDataModel dafDataModel) {
+		if(dafDataModel.getProtocolVersion() < 2) {
+			_debug.warning("Verwende unverschlüsselte Benutzerverwaltung, da die Konfiguration veraltet ist und auf Version 3.9.0 aktualisiert werden muss");
+			return false;
+		}
+		if(System.getProperty("srp6.disable.useradmin") != null) {
+			_debug.warning("Verwende unverschlüsselte Benutzerverwaltung, da die Systemproperty srp6.disable.useradmin gesetzt ist");
+			return false;
+		}
+		AuthenticationStatus authenticationStatus = _connection.getAuthenticationStatus();
+		if(authenticationStatus.isAuthenticated() && authenticationStatus.getMethod().equals("SRP")) {
+			return true;
+		}
+		else {
+			_debug.warning("Verwende unverschlüsselte Benutzerverwaltung, da SRP nicht zur Authentifizierung benutzt werden konnte");
+			return false;
 		}
 	}
 
@@ -277,7 +305,7 @@ class RemoteRequester implements ConfigurationRequester {
 			}
 		}
 		else if("KonfigurationsänderungVerweigert".equals(messageType)) {
-			// Die Konfiguration verweigert nur den Auftrag, weil diverse Randbediengungen nicht erfüllt sind.
+			// Die Konfiguration verweigert nur den Auftrag, weil diverse Randbedingungen nicht erfüllt sind.
 			try {
 				final String reason = deserializer.readString();
 				throw new ConfigurationChangeException(reason);
@@ -290,7 +318,7 @@ class RemoteRequester implements ConfigurationRequester {
 			}
 		}
 		else if("KonfigurationsauftragVerweigert".equals(messageType)) {
-			// Die Konfiguration verweigert nur den Auftrag, weil diverse Randbediengungen nicht erfüllt sind.
+			// Die Konfiguration verweigert nur den Auftrag, weil diverse Randbedingungen nicht erfüllt sind.
 			try {
 				final String reason = deserializer.readString();
 				throw new ConfigurationTaskException(reason);
@@ -307,6 +335,65 @@ class RemoteRequester implements ConfigurationRequester {
 		}
 	}
 
+	@Override
+	public void createSingleServingPassword(final String orderer, final String ordererPassword, final String username, final String singleServingPassword) throws ConfigurationTaskException {
+		_userAdministration.createSingleServingPassword(orderer, ordererPassword, username, singleServingPassword);
+	}
+
+	@Override
+	public int getSingleServingPasswordCount(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
+		return _userAdministration.getSingleServingPasswordCount(orderer, ordererPassword, username);
+	}
+
+	@Override
+	public void clearSingleServingPasswords(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
+		_userAdministration.clearSingleServingPasswords(orderer, ordererPassword, username);
+	}
+
+	@Override
+	public void createNewUser(final String orderer, final String ordererPassword, final String newUsername, final String newUserPid, final String newPassword, final boolean adminRights, final String pidConfigurationArea) throws ConfigurationTaskException {
+		_userAdministration.createNewUser(orderer, ordererPassword, newUsername, newUserPid, newPassword, adminRights, pidConfigurationArea);
+	}
+
+	@Override
+	public void deleteUser(final String orderer, final String ordererPassword, final String userToDelete) throws ConfigurationTaskException {
+		_userAdministration.deleteUser(orderer, ordererPassword, userToDelete);
+	}
+
+	@Override
+	public boolean isUserAdmin(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
+		return _userAdministration.isUserAdmin(orderer, ordererPassword, username);
+	}
+
+	@Override
+	public boolean isUserValid(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
+		return _userAdministration.isUserValid(orderer, ordererPassword, username);
+	}
+
+	@Override
+	public void createNewUser(final String orderer, final String ordererPassword, final String newUsername, final String newUserPid, final String newPassword, final boolean adminRights, final String pidConfigurationArea, final Collection<DataAndATGUsageInformation> data) throws ConfigurationTaskException {
+		_userAdministration.createNewUser(orderer, ordererPassword, newUsername, newUserPid, newPassword, adminRights, pidConfigurationArea, data);
+	}
+
+	@Override
+	public List<SystemObject> subscribeUserChangeListener(final MutableCollectionChangeListener listener) {
+		return _userAdministration.subscribeUserChangeListener(listener);
+	}
+
+	@Override
+	public void unsubscribeUserChangeListener(final MutableCollectionChangeListener listener) {
+		_userAdministration.unsubscribeUserChangeListener(listener);
+	}
+
+	@Override
+	public void changeUserRights(final String orderer, final String ordererPassword, final String user, final boolean adminRights) throws ConfigurationTaskException {
+		_userAdministration.changeUserRights(orderer, ordererPassword, user, adminRights);
+	}
+
+	@Override
+	public void changeUserPassword(final String orderer, final String ordererPassword, final String user, final String newPassword) throws ConfigurationTaskException {
+		_userAdministration.changeUserPassword(orderer, ordererPassword, user, newPassword);
+	}
 
 	public List<SystemObject> getObjects(String... pids) throws RequestException {
 		if(pids.length == 0) return Collections.emptyList();
@@ -375,18 +462,12 @@ class RemoteRequester implements ConfigurationRequester {
 		Data reply = _senderReadConfigObjects.waitForReply(requestIndex);
 		// Antwort-Datensatz erhalten - wird jetzt ausgelesen
 		Deserializer deserializer = getMessageDeserializer(reply, "DynamischeMengeAlleElementeAntwort");
-		SystemObject[] result = null;
 		try {
-			int size = deserializer.readInt();	// Anzahl der Elemente, die ausgelesen werden müssen
-			result = new SystemObject[size];
-			for(int i = 1; i <= size; i++) {
-				result[i - 1] = deserializer.readObjectReference(_localConfiguration);
-			}
+			return readSystemObjectArray(deserializer);
 		}
 		catch(IOException ex) {
 			throw new RequestException("Fehlerhafte Antwort - DynamischeMengeAlleElementeAntwort - erhalten", ex);
 		}
-		return result;
 	}
 
 	public void changeElements(
@@ -520,13 +601,7 @@ class RemoteRequester implements ConfigurationRequester {
 		try {
 			final SystemObject receivedSystemObject = deserializer.readObjectReference(_localConfiguration);
 			final short receivedSimVariant = deserializer.readShort();
-			final int elementCount = deserializer.readInt();
-			ArrayList<SystemObject> elements = new ArrayList<SystemObject>(elementCount);
-			for(int i = 0; i < elementCount; i++) {
-				final SystemObject element = deserializer.readObjectReference(_localConfiguration);
-				elements.add(element);
-			}
-			return elements;
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(IOException ex) {
 			throw new RequestException("Fehlerhafte Antwort - DynamischeKollektionElemente - erhalten", ex);
@@ -702,556 +777,6 @@ class RemoteRequester implements ConfigurationRequester {
 			_debug.error("Unerwarteter Fehler beim Schreiben von konfigurierenden Datensätzen", e);
 			throw new ConfigurationChangeException(e);
 		}
-	}
-
-	/**
-	 * Diese Methode verschickt ein Telegramm vom Typ "AuftragBenutzerverwaltung" und wartet anschließend auf die Antwort.
-	 *
-	 * @param message Nachricht, die verschickt werden soll
-	 *
-	 * @return Statusmeldung oder Antwort der Benutzerverwaltung auf die Anfrage. -1 falls die Anfrage keinen Rückgabewert liefert.
-	 * 
-	 * @throws de.bsvrz.dav.daf.main.impl.config.request.RequestException Fehler bei der Bearbeitung des Telegramms (Der Benutzer hatte nicht die nötigen Rechte diesen Auftrag zu erteilen, usw.)
-	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Fehler bei Bearbeitung des Auftrags auf Konfigurationsseite
-	 */
-	private int sendUserAdministrationTask(final byte[] message) throws RequestException, ConfigurationTaskException {
-		int requestIndex;
-		try {
-			requestIndex = _senderUserAdministration.sendData("AuftragBenutzerverwaltung", message);
-
-//					Data request = createRequestData("AuftragBenutzerverwaltung", message);
-//					requestIndex = request.getScaledValue("anfrageIndex").intValue();
-//					_debug.finer("sending request: ", request);
-//					_connection.sendData(
-//							new ResultData(
-//									_configurationAuthority, _requestDescription, System.currentTimeMillis(), request
-//							)
-//					);
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-			throw new RequestException(e);
-		}
-		Data reply = _senderUserAdministration.waitForReply(requestIndex);
-		// Diese Methode wirft eine Exception, wenn der Auftrag nicht ausgeführt werden konnte.
-		// Die Antwort (ein Integer), ist für bestimmte Anfragen von Interesse und wird zurückgegeben
-		try {
-			return getMessageDeserializer2(reply, "AuftragBenutzerverwaltungAntwort").readInt();
-		}
-		catch(IOException e) {
-			// Falls readInt fehlschlägt, sendet die Konfiguration wohl ein leeres Datenpaket als Antwort. Daraus lässt sich schließen,
-			// dass diese noch keine Antworten auf Benutzerverwaltungsaufträge unterstützt und der Rückgabewert daher auf -1 gesetzt werden kann.
-			return -1;
-		}
-		// Andere Exceptions an aufrufende Funktion weitergeben
-	}
-
-	/**
-	 * Nimmt eine beliebige Exception entgegen und meldet dann die Verbindung zum Datenverteiler ab. Nach der Abmeldung wird eine IllegalStateException geworfen.
-	 *
-	 * @param e Grund, warum die Verbindung abgebrochen werden muss
-	 */
-	private void closeConnectionAndThrowException(Exception e) {
-		_connection.disconnect(true, e.getMessage());
-		throw new IllegalStateException("Kommunikationsprobleme mit der Konfiguration, Verbidung zum Datenverteiler wird abgemeldet. Grund: " + e);
-	}
-
-	public void createSingleServingPassword(String orderer, String ordererPassword, String username, String singleServingPassword)
-			throws ConfigurationTaskException {
-
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(username);
-			serializerParameters.writeString(singleServingPassword);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(1, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public int getSingleServingPasswordCount(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(username);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(8, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			return sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		return -1;
-	}
-
-	public void clearSingleServingPasswords(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(username);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(6, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public void createNewUser(
-			String orderer,
-			String ordererPassword,
-			String newUsername,
-			String newUserPid,
-			String newPassword,
-			boolean adminRights,
-			String pidConfigurationArea
-	) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(newUsername);
-			serializerParameters.writeString(newUserPid);
-			serializerParameters.writeString(newPassword);
-			serializerParameters.writeBoolean(adminRights);
-			serializerParameters.writeString(pidConfigurationArea);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(2, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public void deleteUser(final String orderer, final String ordererPassword, final String userToDelete) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(userToDelete);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(5, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public boolean isUserAdmin(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(username);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(7, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			return sendUserAdministrationTask(byteArrayStream.toByteArray()) == 1;
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		return false; //Sollte nicht erreicht werden
-	}
-
-	public boolean isUserValid(final String orderer, final String ordererPassword, final String username) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(username);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(10, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-			// Daten verschicken und auf Antwort warten
-			return sendUserAdministrationTask(byteArrayStream.toByteArray()) == 1;
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Einmalpasswörtern", e);
-			closeConnectionAndThrowException(e);
-		}
-		return false; //Sollte nicht erreicht werden
-	}
-
-	public void createNewUser(
-			final String orderer,
-			final String ordererPassword,
-			final String newUsername,
-			final String newUserPid,
-			final String newPassword,
-			final boolean adminRights,
-			final String pidConfigurationArea,
-			final Collection<DataAndATGUsageInformation> data) throws ConfigurationTaskException {
-		try {
-
-			if(data == null || data.size() == 0) {
-				//Wenn keine Konfigurationsdaten mitgeliefert werden sollen, createNewUser-Methode aufrufen, die diese nicht mitüberträgt.
-				createNewUser(orderer, ordererPassword, newUsername, newUserPid, newPassword, adminRights, pidConfigurationArea);
-				return;
-			}
-
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(newUsername);
-			serializerParameters.writeString(newUserPid);
-			serializerParameters.writeString(newPassword);
-			serializerParameters.writeBoolean(adminRights);
-			serializerParameters.writeString(pidConfigurationArea);
-			//DataAndATGUsageInformation serialisieren, es wurde am Anfang der Funktion geprüft, ob data null ist.
-			serializerParameters.writeInt(data.size());
-			for(DataAndATGUsageInformation dataAndATGUsageInformation : data) {
-				serializerParameters.writeObjectReference(dataAndATGUsageInformation.getAttributeGroupUsage());
-				serializerParameters.writeData(dataAndATGUsageInformation.getData());
-			}
-			
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(9, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Anlegen eines neuen Benutzers", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public List<SystemObject> subscribeUserChangeListener(MutableCollectionChangeListener listener) {
-		final DafDynamicObjectType userType = (DafDynamicObjectType)_connection.getDataModel().getType("typ.benutzer");
-		if(listener != null){
-			userType.addChangeListener((short)0, listener);
-		}
-		return userType.getElements();
-	}
-
-
-	public void unsubscribeUserChangeListener(final MutableCollectionChangeListener listener) {
-		final DafDynamicObjectType userType = (DafDynamicObjectType)_connection.getDataModel().getType("typ.benutzer");
-		if(listener != null){
-			userType.removeChangeListener((short)0, listener) ;
-		}
-	}
-
-
-	public void changeUserRights(String orderer, String ordererPassword, String user, boolean adminRights) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(user);
-			serializerParameters.writeBoolean(adminRights);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(4, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Benutzerrechten", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern von Benutzerrechten", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern von Benutzerrechten", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	public void changeUserPassword(String orderer, String ordererPassword, String user, String newPassword) throws ConfigurationTaskException {
-		try {
-			// Es wird ein Serializer zum serialisieren der übergebenen Parameter benötigt
-			final ByteArrayOutputStream parameters = new ByteArrayOutputStream();
-			final Serializer serializerParameters = SerializingFactory.createSerializer(parameters);
-			serializerParameters.writeString(user);
-			serializerParameters.writeString(newPassword);
-			// Verschlüsselter Auftrag
-			final byte[] encryptedMessage = createTelegramByteArray(3, serializerParameters.getVersion(), parameters.toByteArray(), ordererPassword);
-
-			final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerParameters.getVersion(), byteArrayStream);
-
-			// Auftraggeber in Klarschrift
-			serializer.writeString(orderer);
-
-			// Benutztes Verschlüsselungsverfahren in Klarschrift
-			serializer.writeString(_encryptDecryptProcedure.getName());
-
-			// Der verschlüsselte Text
-			serializer.writeInt(encryptedMessage.length);
-			serializer.writeBytes(encryptedMessage);
-
-			// Daten verschicken und auf Antwort warten
-			sendUserAdministrationTask(byteArrayStream.toByteArray());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern des Benutzerpassworts", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(RequestException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Senden der Konfigurationsanfrage zum Ändern des Benutzerpassworts", e);
-			closeConnectionAndThrowException(e);
-		}
-		catch(NoSuchVersionException e) {
-			e.printStackTrace();
-			_debug.error("Fehler beim Serialisieren der Konfigurationsanfrage zum Ändern des Benutzerpassworts", e);
-			closeConnectionAndThrowException(e);
-		}
-	}
-
-	/**
-	 * Fordert von der Konfiguration ein Zufallstext an, dieser wird dann mit einem Auftrag versendet
-	 *
-	 * @return Zufallstext, der durch die Konfiguration erzeugt wurde
-	 */
-	private byte[] getRandomText() throws IOException, RequestException, NoSuchVersionException {
-		int requestIndex;
-		try {
-			requestIndex = _senderUserAdministration.sendData("AuftragZufallstext", new byte[]{1});
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-			throw new RequestException(e);
-		}
-		final Data reply = _senderUserAdministration.waitForReply(requestIndex);
-		// Das ist der Zufallstext
-		final Deserializer deserializer = SerializingFactory.createDeserializer(2, new ByteArrayInputStream(reply.getScaledArray("daten").getByteArray()));
-		final int sizeOfData = deserializer.readInt();
-		return deserializer.readBytes(sizeOfData);
 	}
 
 	public Map<String, ConfigurationArea> getAllConfigurationAreas() throws RequestException {
@@ -1543,24 +1068,14 @@ class RemoteRequester implements ConfigurationRequester {
 			Data reply = _senderReadConfigObjects.waitForReply(requestIndex);
 			Deserializer deserializer = getMessageDeserializer(reply, "AntwortObjekteAnfragenMitPidUndZeitbereich");
 
-			final Collection<SystemObject> result = new ArrayList<SystemObject>();
 
-			// Anzahl Objekte auslesen
-			final int numberOfSystemObjects = deserializer.readInt();
-
-			// Alle Objekte der Collection einlesen
-			for(int nr = 0; nr < numberOfSystemObjects; nr++) {
-				result.add(deserializer.readObjectReference(_localConfiguration));
-			}
-
-			return result;
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 			throw new RequestException(e);
 		}
 	}
-
 	public Collection<SystemObject> getObjects(
 			Collection<ConfigurationArea> configurationAreas,
 			Collection<SystemObjectType> systemObjectTypes,
@@ -1611,23 +1126,14 @@ class RemoteRequester implements ConfigurationRequester {
 			Data reply = _senderReadConfigObjects.waitForReply(requestIndex);
 			Deserializer deserializer = getMessageDeserializer(reply, "AntwortObjekteMitBereichUndTypAnfragen");
 
-			final Collection<SystemObject> result = new ArrayList<SystemObject>();
-
-			// Anzahl Objekte auslesen
-			final int numberOfSystemObjects = deserializer.readInt();
-
-			// Alle Objekte der Collection einlesen
-			for(int nr = 0; nr < numberOfSystemObjects; nr++) {
-				result.add(deserializer.readObjectReference(_localConfiguration));
-			}
-
-			return result;
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 			throw new RequestException(e);
 		}
 	}
+
 
 	public Collection<SystemObject> getDirectObjects(
 			ConfigurationArea area, Collection<SystemObjectType> systemObjectTypes, ObjectTimeSpecification timeSpecification
@@ -1663,16 +1169,7 @@ class RemoteRequester implements ConfigurationRequester {
 			Data reply = _senderReadConfigObjects.waitForReply(requestIndex);
 			Deserializer deserializer = getMessageDeserializer(reply, "AntwortObjekteDirekterTyp");
 
-			final Collection<SystemObject> result = new ArrayList<SystemObject>();
-
-			// Anzahl Objekte auslesen
-			final int numberOfSystemObjects = deserializer.readInt();
-
-			// Alle Objekte der Collection einlesen
-			for(int nr = 0; nr < numberOfSystemObjects; nr++) {
-				result.add(deserializer.readObjectReference(_localConfiguration));
-			}
-			return result;
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -1976,7 +1473,7 @@ class RemoteRequester implements ConfigurationRequester {
 
 		try {
 			// Daten auslesen
-			return readSystemObjectList(deserializer);
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(IOException e) {
 			// Fehler beim versuch die Daten auszulesen
@@ -2008,7 +1505,7 @@ class RemoteRequester implements ConfigurationRequester {
 			final Deserializer deserializer = getMessageDeserializer(reply, "AntwortElementeEinerMengeZeit");
 
 			// Antwort auslesen
-			return readSystemObjectList(deserializer);
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -2076,16 +1573,9 @@ class RemoteRequester implements ConfigurationRequester {
 		_senderReadConfigObjects.setMutableCollectionChangeListener(notifyingMutableCollectionChangeListener);
 	}
 
-	private List<SystemObject> readSystemObjectList(final Deserializer deserializer) throws IOException {
-		// Anzahl Systemobjekte, die ausgelesen werden müssen
-		final int size = deserializer.readInt();
-
-		final List<SystemObject> typeElementObjects = new ArrayList<SystemObject>(size);
-
-		for(int nr = 0; nr < size; nr++) {
-			typeElementObjects.add(deserializer.readObjectReference(_localConfiguration));
-		}
-		return typeElementObjects;
+	private SystemObject[] readSystemObjectArray(final Deserializer deserializer) throws IOException {
+		List<SystemObject> list = deserializer.readObjectReferences(_localConfiguration);
+		return list.toArray(new SystemObject[list.size()]);
 	}
 
 	/**
@@ -2125,7 +1615,7 @@ class RemoteRequester implements ConfigurationRequester {
 			final Deserializer deserializer = getMessageDeserializer(reply, "AntwortElementeEinerMengeVersion");
 
 			// Antwort auslesen
-			return readSystemObjectList(deserializer);
+			return deserializer.readObjectReferences(_localConfiguration);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -2325,13 +1815,8 @@ class RemoteRequester implements ConfigurationRequester {
 		final ConfigurationArea configArea = (ConfigurationArea)deserializer.readObjectReference(_localConfiguration);
 		// Text der zum Fehler oder zu der Warnung gehört
 		final String errorText = deserializer.readString();
-		// Anzahl Objekte, die zu dem Fehler oder der Warnung gehören
-		final int numberOfInvolvedObjects = deserializer.readInt();
-		final SystemObject[] involvedObjects = new SystemObject[numberOfInvolvedObjects];
-
-		for(int nr = 0; nr < involvedObjects.length; nr++) {
-			involvedObjects[nr] = deserializer.readObjectReference(_localConfiguration);
-		}
+		// Objekte, die zu dem Fehler oder der Warnung gehören
+		final SystemObject[] involvedObjects = readSystemObjectArray(deserializer);
 
 		return new ConsistencyCheckResultEntry(type, configArea, involvedObjects, errorText);
 	}
@@ -2424,54 +1909,6 @@ class RemoteRequester implements ConfigurationRequester {
 			catch(IOException e) {
 				throw new RequestException("sendConfigAreaBackupTask: Konnte Antwort nicht deserialisieren", e);
 			}
-		}
-	}
-
-	/**
-	 * Erzeugt ein kodiertes Byte-Array, das folgenden Aufbau besitzt:<br> - benutzte Serialisiererversion(Wert ist nicht serialisiert) (ersten 4 Bytes)<br> - Typ
-	 * des Pakets (int)<br> - Länge des Zufallstexts (int) - Zufallstext (byte[]) - übergebenes Byte-Array <code>messageCleartext</code>
-	 *
-	 * @param messageType       Nachrichtentyp
-	 * @param serializerVersion Version, mit der die Daten serialisiert werden sollen
-	 * @param messageCleartext  Bisher erzeugte Daten, die verschickt werden sollen
-	 *
-	 * @return verschlüsseltes Byte-Array, das alle oben genannten Daten enthält
-	 *
-	 * @throws de.bsvrz.dav.daf.main.impl.config.request.RequestException Alle Fehler die auftauchen werden als RequestException interpretiert. Dies wird gemacht, da eine weitere Übertragung keinen Sinn
-	 *                          macht.
-	 */
-	private byte[] createTelegramByteArray(int messageType, int serializerVersion, byte[] messageCleartext, String encryptionText) throws RequestException {
-		try {
-			// Zufallstext von der Konfiguration anfordern
-			byte[] randomText = getRandomText();
-
-			final ByteArrayOutputStream out = new ByteArrayOutputStream();
-			final Serializer serializer = SerializingFactory.createSerializer(serializerVersion, out);
-
-			serializer.writeInt(messageType);
-			serializer.writeInt(randomText.length);
-			serializer.writeBytes(randomText);
-			// Klartext schreiben. Was ausgelesen werden kann, weiss der Empfänger (longs, ints, ....)
-			serializer.writeBytes(messageCleartext);
-
-			final byte[] randomStringAndCleartextMessage = out.toByteArray();
-
-			// Die ersten 4 Bytes enhalten die Serialiszerversion
-			final byte[] wholeMessage = new byte[4 + randomStringAndCleartextMessage.length];
-
-			// Das höherwärtigste Byte steht in Zelle 0
-			wholeMessage[0] = (byte)((serializerVersion & 0xff000000) >>> 24);
-			wholeMessage[1] = (byte)((serializerVersion & 0x00ff0000) >>> 16);
-			wholeMessage[2] = (byte)((serializerVersion & 0x0000ff00) >>> 8);
-			wholeMessage[3] = (byte)(serializerVersion & 0x000000ff);
-
-			// Array mit Zufallstext kopieren
-			System.arraycopy(randomStringAndCleartextMessage, 0, wholeMessage, 4, randomStringAndCleartextMessage.length);
-
-			return EncryptFactory.getEncryptInstance(_encryptDecryptProcedure).encrypt(wholeMessage, encryptionText);
-		}
-		catch(Exception e) {
-			throw new RequestException(e);
 		}
 	}
 
@@ -2638,6 +2075,11 @@ class RemoteRequester implements ConfigurationRequester {
 		catch(ConfigurationTaskException e) {
 			throw new ConfigurationChangeException(e);
 		}
+	}
+
+	@Override
+	public UserAdministration getUserAdministration() {
+		return _userAdministration;
 	}
 
 	private class ObjectCreationWaiter {

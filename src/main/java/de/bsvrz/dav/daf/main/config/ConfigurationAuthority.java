@@ -45,9 +45,9 @@ public interface ConfigurationAuthority extends ConfigurationObject {
 	public short getCoding();
 
 	/**
-	 * Gibt den Default-Bereich des Konfigurationsverantwortlichen zurück oder null falls kein Bereich doer kein gültiger Bereich definiert
+	 * Gibt den Default-Bereich des Konfigurationsverantwortlichen zurück oder null falls kein Bereich oder kein gültiger Bereich definiert
 	 * ist.
-	 * @return Default-Bereich doer null
+	 * @return Default-Bereich oder null
 	 */
 	ConfigurationArea getDefaultConfigurationArea();
 }

@@ -27,12 +27,12 @@
 
 package de.bsvrz.dav.daf.communication.lowLevel;
 
-import de.bsvrz.dav.daf.main.impl.config.AttributeGroupUsageIdentifications;
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.SendDataObject;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
-import de.bsvrz.dav.daf.main.impl.CommunicationConstant;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.ApplicationDataTelegram;
+import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.TransmitterDataTelegram;
+import de.bsvrz.dav.daf.main.impl.CommunicationConstant;
+import de.bsvrz.dav.daf.main.impl.config.AttributeGroupUsageIdentifications;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

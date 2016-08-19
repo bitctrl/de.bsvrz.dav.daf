@@ -28,10 +28,10 @@ package de.bsvrz.dav.daf.communication.dataRepresentation.data.byteArray;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.config.IntegerValueState;
-import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.config.ObjectLookup;
+import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.*;
+import java.util.Iterator;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

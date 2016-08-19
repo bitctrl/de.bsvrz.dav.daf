@@ -30,7 +30,7 @@ package de.bsvrz.dav.daf.main.config;
 
 import de.bsvrz.dav.daf.main.Data;
 
-import java.util.*;
+import java.util.Collection;
 
 /**
  * Schnittstelle zum Zugriff auf die Eigenschaften eines System-Objekts. Datensätze, die vom Datenverteiler transportiert werden, sind immer genau einem

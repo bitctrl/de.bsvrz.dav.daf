@@ -25,30 +25,24 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import de.bsvrz.dav.daf.main.archive.ArchiveQueryResult;
-import de.bsvrz.dav.daf.main.archive.ArchiveInformationResult;
-import de.bsvrz.dav.daf.main.archive.TimingType;
-import de.bsvrz.dav.daf.main.archive.ArchiveRequestOption;
-import de.bsvrz.dav.daf.main.archive.ArchiveOrder;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKindCombination;
-import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
-import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
-import de.bsvrz.sys.funclib.dataSerializer.Serializer;
-import de.bsvrz.sys.funclib.debug.Debug;
-
-import java.util.List;
-import java.io.InputStream;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ByteArrayOutputStream;
-
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.DataNotSubscribedException;
-import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
+import de.bsvrz.dav.daf.main.archive.*;
+import de.bsvrz.dav.daf.main.config.ConfigurationException;
+import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
+import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
+import de.bsvrz.sys.funclib.dataSerializer.Serializer;
+import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
+import de.bsvrz.sys.funclib.debug.Debug;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 /**
  * Diese Klasse beaufragt das Archivsystem die angegebenen Zeitbereiche zu löschen. Dabei kann unterschieden werden ob

@@ -27,30 +27,24 @@
 
 package de.bsvrz.dav.daf.main.impl.config.request.telegramManager;
 
-import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
-import de.bsvrz.sys.funclib.dataSerializer.NoSuchVersionException;
-import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
-import de.bsvrz.dav.daf.main.impl.config.request.KindOfUpdateTelegramm;
-import de.bsvrz.dav.daf.main.impl.config.request.RequestException;
+import de.bsvrz.dav.daf.communication.dataRepresentation.data.DataFactory;
 import de.bsvrz.dav.daf.main.ClientDavInterface;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.OneSubscriptionPerSendData;
-import de.bsvrz.dav.daf.main.config.Aspect;
-import de.bsvrz.dav.daf.main.config.AttributeGroup;
-import de.bsvrz.dav.daf.main.config.ConfigurationAuthority;
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.config.UpdateDynamicObjects;
-import de.bsvrz.dav.daf.main.config.MutableCollection;
-import de.bsvrz.dav.daf.main.config.MutableCollectionChangeListener;
-import de.bsvrz.dav.daf.main.impl.config.DafMutableSet;
+import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.main.impl.config.DafDynamicObject;
+import de.bsvrz.dav.daf.main.impl.config.DafMutableSet;
+import de.bsvrz.dav.daf.main.impl.config.request.KindOfUpdateTelegramm;
+import de.bsvrz.dav.daf.main.impl.config.request.RequestException;
 import de.bsvrz.sys.funclib.concurrent.UnboundedQueue;
+import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
+import de.bsvrz.sys.funclib.dataSerializer.NoSuchVersionException;
+import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
 import de.bsvrz.sys.funclib.debug.Debug;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
 
 /**
  * Ermöglicht es, Anfragen an die Konfiguration zu stellen. Die Anfragen sind dabei "nur lesend", es werden also keine Daten der Konfiguration geändert.
@@ -356,6 +350,10 @@ public class ConfigurationRequestReadData extends AbstractSenderReceiverCommunic
 					Data data = _unboundedQueue.take();
 					if(data == null) {
 						_debug.fine("UpdateRunnable wird gestoppt " + _responseAspect + " " + _responseAtg);
+						
+						// Diese Methode läuft ggf. noch wenn das Datenmodell schon geschlossen ist und fügt weitere Objekte in den Cache ein
+						// Daher hier Cache noch einmal leeren
+						DataFactory.forget(_localConfiguration);
 						return;
 					}
 					// Prüfen, was benachrichtigt werden muss

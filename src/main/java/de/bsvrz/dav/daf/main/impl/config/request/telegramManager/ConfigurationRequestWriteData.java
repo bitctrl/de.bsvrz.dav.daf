@@ -27,11 +27,7 @@ package de.bsvrz.dav.daf.main.impl.config.request.telegramManager;
 
 import de.bsvrz.dav.daf.main.ClientDavInterface;
 import de.bsvrz.dav.daf.main.OneSubscriptionPerSendData;
-import de.bsvrz.dav.daf.main.config.AttributeGroup;
-import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.config.SystemObject;
-import de.bsvrz.dav.daf.main.config.ConfigurationAuthority;
-import de.bsvrz.dav.daf.main.config.Aspect;
+import de.bsvrz.dav.daf.main.config.*;
 
 /**
  * Ermöglicht es, Anfragen an die Konfiguration zu stellen. Die Anfragen sind schreibender Natur und

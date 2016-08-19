@@ -27,9 +27,9 @@
 
 package de.bsvrz.dav.daf.communication.dataRepresentation;
 
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 import de.bsvrz.dav.daf.main.config.Attribute;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;

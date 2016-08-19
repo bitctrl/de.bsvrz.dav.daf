@@ -26,7 +26,9 @@
 
 package de.bsvrz.dav.daf.main.config.management.consistenycheck;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Klasse, die das Ergebnis einer Konsistenzprüfung enthält.

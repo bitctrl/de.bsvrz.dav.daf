@@ -30,11 +30,14 @@ package de.bsvrz.sys.funclib.dataSerializer;
 
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.config.AttributeGroup;
+import de.bsvrz.dav.daf.main.config.DataModel;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.config.ObjectLookup;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Schnittstelle zum Deserialisieren von Datensätzen. Konkrete Objekte zum Deserialisieren können mit den verschiedenen
@@ -128,6 +131,28 @@ public interface Deserializer {
 	 * @throws IOException Wenn beim Lesen vom Eingabe-Stream Fehler aufgetreten sind.
 	 */
 	public SystemObject readObjectReference(ObjectLookup dataModel) throws IOException;
+
+	/**
+	 * Liest mehrere Objektreferenzen vom Eingabe-Stream dieses Deserialisierers. Diese Methode liefert das gleiche Resultat wie
+	 * 
+	 *     size = readInt()
+	 *
+	 * gefolgt von *size* Aufrufen von 
+	 * 
+	 *     readObjectReference(). 
+	 *
+	 * @param dataModel Datenmodell mit dessen Hilfe Objektreferenzen aufgelöst werden.
+	 * @return Arrays von referenzierten Systemobjekten (ggf. mit null-Elementen wenn ein Objekt nicht aufgelöst werden konnte)
+	 * @throws IOException Wenn beim Lesen vom Eingabe-Stream Fehler aufgetreten sind.
+	 */
+	default List<SystemObject> readObjectReferences(DataModel dataModel) throws IOException {
+		int size = readInt();
+		final List<SystemObject> result = new ArrayList<>(size);
+		for(int i = 0; i < size; i++) {
+			result.add(readObjectReference(dataModel));
+		}
+		return result;
+	}
 
 	/**
 	 * Liest und deserialisiert einen <code>byte</code>-Wert vom Eingabe-Stream dieses Deserialisierers.

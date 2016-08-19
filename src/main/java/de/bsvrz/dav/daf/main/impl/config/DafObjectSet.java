@@ -34,6 +34,7 @@ import de.bsvrz.dav.daf.main.config.ObjectSetType;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.impl.config.request.ConfigurationRequester;
 import de.bsvrz.dav.daf.main.impl.config.request.RequestException;
+import de.bsvrz.dav.daf.util.Longs;
 import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
 import de.bsvrz.sys.funclib.debug.Debug;
 
@@ -51,7 +52,7 @@ import java.util.List;
 public abstract class DafObjectSet extends DafConfigurationObject implements ObjectSet {
 
 	/** Die Ids der Elemente dieser Menge */
-	protected ArrayList<Long> _setElementIds;
+	protected long[] _setElementIds;
 
 	/** Die Elemente dieser Menge */
 	protected List<SystemObject> _setElements;
@@ -81,8 +82,26 @@ public abstract class DafObjectSet extends DafConfigurationObject implements Obj
 			short validFromVersionNumber,
 			short validToVersionNumber,
 			long responsibleObjectId,
-			long setIds[],
-			ArrayList setElementIds
+			long[] setIds,
+			ArrayList<Long> setElementIds
+	) {
+		this(id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds, Longs.asArray(setElementIds));
+	}
+
+	/** Erzeugt ein neues Objekt mit den angegebenen Eigenschaften */
+	protected DafObjectSet(
+			long id,
+			String pid,
+			String name,
+			long typId,
+			byte state,
+			String error,
+			DafDataModel dataModel,
+			short validFromVersionNumber,
+			short validToVersionNumber,
+			long responsibleObjectId,
+			long[] setIds, 
+			final long[] setElementIds
 	) {
 		super(
 				id, pid, name, typId, state, error, dataModel, validFromVersionNumber, validToVersionNumber, responsibleObjectId, setIds
@@ -96,14 +115,14 @@ public abstract class DafObjectSet extends DafConfigurationObject implements Obj
 			str += "Leere Menge";
 		}
 		else {
-			int size = _setElementIds.size();
+			int size = _setElementIds.length;
 			if(size == 0) {
 				str += "Leere Menge";
 			}
 			else {
 				str += "[ ";
-				for(int i = 0; i < size; ++i) {
-					str += ((Long)_setElementIds.get(i)).longValue() + " ";
+				for(final long _setElementId : _setElementIds) {
+					str += _setElementId + " ";
 				}
 				str += "] ";
 			}
@@ -117,14 +136,14 @@ public abstract class DafObjectSet extends DafConfigurationObject implements Obj
 			out.writeInt(0);
 		}
 		else {
-			int size = _setElementIds.size();
+			int size = _setElementIds.length;
 			if(size == 0) {
 				out.writeInt(0);
 			}
 			else {
 				out.writeInt(size);
 				for(int i = 0; i < size; ++i) {
-					out.writeLong(((Long)_setElementIds.get(i)).longValue());
+					out.writeLong(_setElementIds[i]);
 				}
 			}
 		}
@@ -132,11 +151,11 @@ public abstract class DafObjectSet extends DafConfigurationObject implements Obj
 
 	public void read(DataInputStream in) throws IOException {
 		super.read(in);
-		_setElementIds = new ArrayList<Long>();
 		int size = in.readInt();
+		_setElementIds = new long[size];
 		if(size > 0) {
 			for(int i = 0; i < size; ++i) {
-				_setElementIds.add(new Long(in.readLong()));
+				_setElementIds[i] = in.readLong();
 			}
 		}
 	}
@@ -144,10 +163,10 @@ public abstract class DafObjectSet extends DafConfigurationObject implements Obj
 	@Override
 	public void read(final Deserializer deserializer) throws IOException {
 		super.read(deserializer);
-		_setElementIds = new ArrayList<Long>();
 		int size = deserializer.readInt();
+		_setElementIds = new long[size];
 		for(int i = 0; i < size; ++i) {
-			_setElementIds.add(deserializer.readLong());
+			_setElementIds[i] = deserializer.readLong();
 		}
 	}
 

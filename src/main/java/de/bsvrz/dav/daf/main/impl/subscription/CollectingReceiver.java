@@ -31,7 +31,7 @@ import de.bsvrz.dav.daf.main.ClientReceiverInterface;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.ResultData;
 
-import java.util.*;
+import java.util.ArrayList;
 
 /**
  * Speichert vom Datenverteiler empfangene Datensätze zur späteren Auslieferung an einen Receiver der Applikation.

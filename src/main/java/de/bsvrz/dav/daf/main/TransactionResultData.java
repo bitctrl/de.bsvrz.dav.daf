@@ -35,11 +35,7 @@ import de.bsvrz.dav.daf.main.config.SystemObject;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Klasse, die einen Transaktionsdatensatz kapselt.

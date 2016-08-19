@@ -28,15 +28,13 @@
 package de.bsvrz.dav.daf.communication.dataRepresentation;
 
 import de.bsvrz.dav.daf.main.Data;
-import de.bsvrz.dav.daf.main.config.IntegerAttributeType;
-import de.bsvrz.dav.daf.main.config.IntegerValueRange;
-import de.bsvrz.dav.daf.main.config.IntegerValueState;
-import de.bsvrz.dav.daf.main.config.ReferenceAttributeType;
-import de.bsvrz.dav.daf.main.config.StringAttributeType;
-import de.bsvrz.dav.daf.main.config.TimeAttributeType;
+import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.dav.daf.util.WeakIdentityHashMap;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Diese Klasse enthält für jeden Attributtyp den sogenannten "undefiniert Wert" und stellt Methoden zur Verfügung diesen Wert zu setzen oder zu prüfen ob ein

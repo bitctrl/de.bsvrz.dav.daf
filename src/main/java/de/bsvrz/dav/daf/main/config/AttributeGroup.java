@@ -27,7 +27,7 @@
 
 package de.bsvrz.dav.daf.main.config;
 
-import java.util.*;
+import java.util.Collection;
 
 /**
  * Schnittstelle zum Zugriff auf Attribute und Eigenschaften einer Attributgruppe.

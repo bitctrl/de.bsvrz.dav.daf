@@ -26,14 +26,11 @@
  */
 package de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1;
 
+import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeDefinitionInfo;
+import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
+import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.config.AttributeGroup;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.main.Data;
-
-import java.util.*;
-
-import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
-import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeDefinitionInfo;
 
 /**
  * Klasse, die noch zu dokumentieren ist.
@@ -43,7 +40,7 @@ import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeDefi
  */
 public class AttributeGroupInfo implements AttributeInfo {
 
-	private static final Map<AttributeGroup, AttributeInfo> _Atg2AttributeInfo = new IdentityHashMap<AttributeGroup, AttributeInfo>();
+	private static final SystemObjectCache<AttributeGroup, AttributeInfo> _Atg2AttributeInfo = new SystemObjectCache<AttributeGroup, AttributeInfo>();
 
 	private final AttributeGroup _atg;
 	private final AttributeDefinitionInfo _definitionInfo;
@@ -67,12 +64,7 @@ public class AttributeGroupInfo implements AttributeInfo {
 
 	public static void forgetDataModel(DataModel dataModel) {
 		synchronized(_Atg2AttributeInfo) {
-			List<AttributeGroup> atgs = new ArrayList<AttributeGroup>(_Atg2AttributeInfo.keySet());
-			for(AttributeGroup attributeGroup : atgs) {
-				if(attributeGroup.getDataModel() == dataModel) {
-					_Atg2AttributeInfo.remove(attributeGroup);
-				}
-			}
+			_Atg2AttributeInfo.forgetDataModel(dataModel);
 		}
 	}
 

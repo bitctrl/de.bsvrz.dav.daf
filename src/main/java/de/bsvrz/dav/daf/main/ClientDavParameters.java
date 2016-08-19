@@ -30,17 +30,23 @@ package de.bsvrz.dav.daf.main;
 
 import de.bsvrz.dav.daf.communication.lowLevel.CommunicationParameters;
 import de.bsvrz.dav.daf.communication.lowLevel.ServerConnectionInterface;
+import de.bsvrz.dav.daf.main.authentication.AuthenticationFile;
+import de.bsvrz.dav.daf.main.authentication.ClientCredentials;
+import de.bsvrz.dav.daf.main.authentication.InteractiveAuthentication;
+import de.bsvrz.dav.daf.main.authentication.UserProperties;
 import de.bsvrz.dav.daf.main.impl.ArgumentParser;
 import de.bsvrz.dav.daf.main.impl.CommunicationConstant;
 import de.bsvrz.dav.daf.main.impl.InvalidArgumentException;
 import de.bsvrz.sys.funclib.commandLineArgs.ArgumentList;
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.io.BufferedInputStream;
-import java.io.Console;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.*;
+import java.nio.file.Paths;
+import java.util.Hashtable;
+import java.util.Locale;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parameter für die Datenverteiler-Applikationsfunktionen. Diese Klasse implementiert die Schnittstelle DatenverteilerApplikationsfunktionen-Starter. Beim
@@ -111,6 +117,9 @@ public class ClientDavParameters implements Cloneable{
 
 	/** Parameter Schlüssel */
 	private static final String TEST_CONNECTION_KEY = "-anmeldungFuerTestzwecke=";
+	
+	/** Authentifizierungsdatei */
+	private UserProperties _userProperties;
 
 	/** Die Ressourcen des Clients. */
 	private ResourceBundle _resourceBundle = ResourceBundle.getBundle("de.bsvrz.dav.daf.main.impl.clientResourceBundle", Locale.getDefault());
@@ -129,10 +138,7 @@ public class ClientDavParameters implements Cloneable{
 	private String _configurationPath;
 
 	/** Der Name des Benutzers */
-	private String _userName;
-
-	/** Der Passwort des Benutzers */
-	private String _userPassword;
+	private String _userName = "";
 
 	/** die Subadresse des Datenverteilers */
 	private int _subAddress;
@@ -228,10 +234,25 @@ public class ClientDavParameters implements Cloneable{
 	private double _secondaryConnectionBufferRatio = 0.01;
 
 	/**
+	 * Ob die alte Hmac-Authentifizierung erlaubt ist. TBD 2017 Default ändern
+	 */
+	private boolean _allowHmacAuthentication = true;
+
+	/**
+	 * Bevorzugte Konfiguration der Verschlüsselung
+	 */
+	private EncryptionConfiguration _encryptionPreference = EncryptionConfiguration.AlwaysEncrypted;
+	
+	/**
 	 * True falls das Objekt schreibgeschützt ist. Die ClientDavConnection erstellt eine schreibgeschütze Kopie
 	 * dieses Objekts damit Parameter wie Simulationsvariante nicht im laufenden Betrieb geändert werden können
 	 */
 	private boolean _readonly = false;
+
+	/**
+	 * Der Einmalpasswortindex oder -1 für einen normalen Login 
+	 */
+	private int _passwordIndex = -1;
 
 	/**
 	 * Erzeugt einen neuen Parametersatz mit Defaultwerten für die einzelnen Parameter.
@@ -244,8 +265,6 @@ public class ClientDavParameters implements Cloneable{
 
 			_configurationPath = null;
 			_address = _resourceBundle.getString("Datenverteiler-Adresse");
-			_userName = _resourceBundle.getString("Benutzername");
-			_userPassword = _resourceBundle.getString("Benutzerpasswort");
 			_applicationName = _resourceBundle.getString("Applikationsname");
 			_applicationTypePid = _resourceBundle.getString("Applikationstyp-PID");
 			_configurationPid = _resourceBundle.getString("KonfigurationsBereich-PID");
@@ -322,6 +341,7 @@ public class ClientDavParameters implements Cloneable{
 			int minimumThroughput = Integer.parseInt(_resourceBundle.getString("MindestDurchsatz"));
 			_communicationParameters.setMinimumThroughput(minimumThroughput);
 			_incarnationName = "";
+			_userProperties = null;
 		}
 		catch(NumberFormatException ex) {
 			ex.printStackTrace();
@@ -481,11 +501,7 @@ public class ClientDavParameters implements Cloneable{
 
 			//User name
 			parameter = getParameter(startArguments, USER_NAME_KEY);
-			if(parameter == null) {
-				_userName = _resourceBundle.getString("Benutzername");
-				_userPassword = _resourceBundle.getString("Benutzerpasswort");
-			}
-			else {
+			if(parameter != null) {
 				try {
 					_userName = ArgumentParser.getParameter(parameter, USER_NAME_KEY);
 					if((_userName == null) || (_userName.length() == 0)) {
@@ -493,7 +509,6 @@ public class ClientDavParameters implements Cloneable{
 								"Benutzername-Parameter muss folgende Formatierung besitzen: -benutzer=Zeichenkette"
 						);
 					}
-					_userPassword = null;
 				}
 				catch(InvalidArgumentException ex) {
 					throw new MissingParameterException(
@@ -501,57 +516,34 @@ public class ClientDavParameters implements Cloneable{
 					);
 				}
 			}
-			//Authentification file name
-			if(_userPassword == null) {
-				parameter = getParameter(startArguments, AUTHENTIFICATION_FILE_KEY);
-				if(parameter == null) {
-					throw new MissingParameterException("Authentifizierungsdatei sollte mit -authentifizierung=... angegeben werden");
+
+			// User Passwort Tabelle
+			parameter = getParameter(startArguments, AUTHENTIFICATION_FILE_KEY);
+			if(parameter == null) {
+				_userProperties = null;
+			}
+			else {
+				try {
+					tmp = ArgumentParser.getParameter(parameter, AUTHENTIFICATION_FILE_KEY);
+					if((tmp == null) || (tmp.length() == 0)) {
+						throw new MissingParameterException(
+								"Authentifizierungsdatei-Parameter muss folgende Formatierung besitzen: -authentifizierung=Zeichenkette"
+						);
+					}
+					if(tmp.equals("STDIN") || tmp.equalsIgnoreCase("interaktiv")){
+						_userProperties = InteractiveAuthentication.getInstance();
+					}
+					else {
+						_userProperties = new AuthenticationFile(Paths.get(tmp));
+					}
 				}
-				else {
-					try {
-						tmp = ArgumentParser.getParameter(parameter, AUTHENTIFICATION_FILE_KEY);
-						if((tmp == null) || (tmp.length() == 0)) {
-							throw new MissingParameterException(
-									"Authentifizierungsdatei-Parameter muss folgende Formatierung besitzen: -authentifizierung=Zeichenkette"
-							);
-						}
-						else if(tmp.equals("STDIN")) {
-							Console console = null;
-							try {
-								console = System.console();
-							}
-							catch(Exception ignored) {
-							}
-							if(console != null) {
-								_userPassword = new String(console.readPassword("Passwort: "));
-							}
-							else {
-								throw new MissingParameterException(
-										"Das Einlesen von der Konsole ist nicht möglich"
-								);
-							}
-						}
-						else {
-							Properties properties = new Properties();
-							try {
-								properties.load(new BufferedInputStream(new FileInputStream(tmp)));
-								_userPassword = properties.getProperty(_userName);
-								if((_userPassword == null) || (_userPassword.length() == 0)) {
-									throw new MissingParameterException(
-											"Das Passwort für den Benutzer " + _userName + " ist in der Authentifizierungsdatei " + tmp + " nicht vorhanden"
-									);
-								}
-							}
-							catch(IOException ex) {
-								throw new MissingParameterException("Spezifizierte Authentifizierungsdatei nicht vorhanden");
-							}
-						}
-					}
-					catch(InvalidArgumentException ex) {
-						ex.printStackTrace();
-					}
+				catch(InvalidArgumentException ex) {
+					throw new MissingParameterException(
+							"Authentifizierungsdatei-Parameter muss folgende Formatierung besitzen: -authentifizierung=Zeichenkette", ex
+					);
 				}
 			}
+			
 			//Authentification process
 			parameter = getParameter(startArguments, AUTHENTIFICATION_PROCESS_KEY);
 			if(parameter == null) {
@@ -730,6 +722,11 @@ public class ClientDavParameters implements Cloneable{
 			_useSecondConnection = argumentList.fetchArgument("-zweiteVerbindung=nein").booleanValue();
 
 			_secondaryConnectionBufferRatio = argumentList.fetchArgument("-zweiteVerbindungPufferAnteil=0.01").doubleValueBetween(0, 1);
+			
+			
+			_allowHmacAuthentication = argumentList.fetchArgument("-erlaubeHmacAuthentifizierung=ja").booleanValue();
+			
+			_encryptionPreference = argumentList.fetchArgument("-verschluesselung=immer").asEnum(EncryptionConfiguration.class);
 
 			//Durchsatzprüfung
 			float throughputControlSendBufferFactor;
@@ -833,117 +830,6 @@ public class ClientDavParameters implements Cloneable{
 		}
 	}
 
-//	/**
-//	 * Erzeugt einen neuen Parametersatz und setzt die in dem übergebenen Aufrufargument angegebenen Parameter mit den jeweils angegebenen Werten. Der Konstruktor
-//	 * implementiert die Starterschnittstelle der Datenverteilerapplikationsfunktionen.
-//	 *
-//	 * @param serverDavParameters die Parameter des Servers
-//	 *
-//	 * @throws MissingParameterException Bei formalen Fehlern beim Lesen der Aufrufargumente oder der Defaultwerte.
-//	 */
-//	public ClientDavParameters(ServerDavParameters serverDavParameters) throws MissingParameterException {
-//		_communicationParameters = new CommunicationParameters();
-//		_configurationPath = null;
-//		// If localmode set the pid of the configuration
-//		if(serverDavParameters.isLocalMode()) {
-//			Object objects[] = serverDavParameters.getLocalModeParameter();
-//			if(objects == null) {
-//				throw new IllegalStateException("Inkonsistente Parameter.");
-//			}
-//			_configurationPid = (String)objects[0];
-//
-//			//try {
-//			//	_address = java.net.InetAddress.getLocalHost().getHostAddress();
-//			//}
-//			//catch (java.net.UnknownHostException ex) {
-//			//	throw new IllegalStateException(ex.getMessage());
-//			//}
-//			// Das obige deaktivierte InetAddress.getLocalHost() lieferte die lokale IP-Adresse des Netzwerkanschlusses,
-//			// dies machte Probleme, weil beim Abziehen des Netzwerkkabels in manchen Betriebssystemen (Windows)
-//			// das Netzwerkinterface deaktiviert wird und deshalb die interne Verbindung im
-//			// Datenverteiler dann nicht mehr funktioniert. Statt dessen wird jetzt für die interne Verbindung
-//			// das Loopback-Interface mit der festen Adresse 127.0.0.1 benutzt, welches unabhängig von realen
-//			// Netzwerkinterfaces funktioniert:
-//			_address = "127.0.0.1";  // localhost über loopback
-//
-//			_subAddress = serverDavParameters.getApplicationConnectionsSubAddress();
-//			_userName = "TransmitterLocalApplication@" + System.currentTimeMillis();
-//			_userPassword = "TransmitterLocalApplication";
-//			_applicationName = "TransmitterLocalApplication@" + System.currentTimeMillis();
-//		}
-//		// If remotemode set the adress and sub adress of the destination transmitter
-//		else {
-//			Object objects[] = serverDavParameters.getRemoteModeParameter();
-//			if(objects == null) {
-//				throw new IllegalStateException("Inkonsistente Parameter.");
-//			}
-//			_address = (String)objects[0];
-//			_subAddress = ((Integer)objects[1]).intValue();
-//			_configurationPid = (String)objects[2];
-//			_userName = serverDavParameters.getUserName();
-//			_userPassword = serverDavParameters.getUserPassword();
-//			_applicationName = "TransmitterRemoteApplication@" + System.currentTimeMillis();
-//		}
-//
-//		if(_subAddress < 0) {
-//			throw new MissingParameterException("Die Subadresse muss grösser gleich 0 sein");
-//		}
-//
-//		_simulationVariant = 0;
-//		_communicationSendFlushDelay = 1000;
-//		_applicationTypePid = "typ.applikation";
-//		_authentificationProcessName = serverDavParameters.getAuthentificationProcessName();
-//		try {
-//			Class.forName(_authentificationProcessName);
-//		}
-//		catch(ClassNotFoundException ex) {
-//			throw new IllegalStateException(
-//					"Die Implementierung des Authentifizierungsverfahrens existiert nicht:" + _authentificationProcessName
-//			);
-//		}
-//		_maxTelegramSize = serverDavParameters.getMaxDataTelegramSize();
-//		long receiveKeepAliveTimeout = serverDavParameters.getReceiveKeepAliveTimeout();
-//		if(receiveKeepAliveTimeout < 1000) {
-//			throw new MissingParameterException("Timeouts müssen grösser gleich als 1 Sekunde sein");
-//		}
-//		_communicationParameters.setReceiveKeepAliveTimeout(receiveKeepAliveTimeout);
-//		long sendKeepAliveTimeout = serverDavParameters.getSendKeepAliveTimeout();
-//		if(sendKeepAliveTimeout < 1000) {
-//			throw new MissingParameterException("Timeouts müssen grösser gleich als 1 Sekunde sein");
-//		}
-//		_communicationParameters.setSendKeepAliveTimeout(sendKeepAliveTimeout);
-//		_outputBufferSize = serverDavParameters.getCommunicationOutputBufferSize();
-//		_inputBufferSize = serverDavParameters.getCommunicationInputBufferSize();
-//		_communicationParameters.setThroughputControlSendBufferFactor(CommunicationConstant.FLOW_CONTROL_FACTOR);
-//		_communicationParameters.setThroughputControlInterval(CommunicationConstant.THROUGHPUT_CONTROL_INTERVAL);
-//		_communicationParameters.setMinimumThroughput(CommunicationConstant.MINIMUM_THROUGHPUT);
-//
-//		try {
-//			String communicationProtocolName = serverDavParameters.getLowLevelCommunicationName();
-//			if(communicationProtocolName == null) {
-//				throw new IllegalStateException("Inkonsistente Parameter.");
-//			}
-//			Class aClass = Class.forName(communicationProtocolName);
-//			if(aClass == null) {
-//				throw new IllegalStateException("Unbekannter Kommunikationsprotokollname.");
-//			}
-//			ServerConnectionInterface connection = (ServerConnectionInterface)aClass.newInstance();
-//			if(connection == null) {
-//				throw new IllegalStateException("Unbekannter Kommunikationsprotokollname.");
-//			}
-//			_lowLevelCommunicationName = connection.getPlainConnectionName();
-//		}
-//		catch(ClassNotFoundException ex) {
-//			throw new IllegalStateException("Unbekannter Kommunikationsprotokollname.");
-//		}
-//		catch(InstantiationException ex) {
-//			throw new IllegalStateException("Unbekannter Kommunikationsprotokollname.");
-//		}
-//		catch(IllegalAccessException ex) {
-//			throw new IllegalStateException("Unbekannter Kommunikationsprotokollname.");
-//		}
-//	}
-
 	/**
 	 * Erzeugt einen neuen Parametersatz mit den angegebenen Werten.
 	 *
@@ -961,20 +847,49 @@ public class ClientDavParameters implements Cloneable{
 	 * @param inputBufferSize Größe des Empfangspuffers in Bytes, der bei der Kommunikation mit dem Datenverteiler eingesetzt wird.
 	 * @param communicationProtocolName Klassenname des zu verwendenden Kommunikationsprotokolls
 	 * @throws MissingParameterException Bei formalen Fehlern beim Lesen der Aufrufargumente oder der Defaultwerte.
+	 * @deprecated Benutzername und Passwort sollte direkt bei {@link ClientDavInterface#login(String, ClientCredentials)} übergeben werden
 	 */
+	@Deprecated
 	public ClientDavParameters(
 			String configurationPid, String address, int subAddress, String userName, String userPassword, String applicationName,
 			final String authentificationProcessName, final int maxTelegramSize, final long receiveKeepAliveTimeout, final long sendKeepAliveTimeout,
 			final int outputBufferSize, final int inputBufferSize, final String communicationProtocolName) throws MissingParameterException {
+		this(configurationPid, address, subAddress, userName, applicationName, authentificationProcessName, maxTelegramSize, receiveKeepAliveTimeout, sendKeepAliveTimeout, outputBufferSize, inputBufferSize, communicationProtocolName, true, EncryptionConfiguration.AlwaysEncrypted);
+		setUserPassword(userPassword);
+	}
+
+	/**
+	 * Erzeugt einen neuen Parametersatz mit den angegebenen Werten.
+	 *
+	 * @param configurationPid Pid der Konfiguration
+	 * @param address Kommunikationsadresse des Datenverteilers (IP-Adresse oder Rechnername)
+	 * @param subAddress Kommunikationssubadresse des Datenverteilers (TCP-Portnummer)
+	 * @param userName Benutzername
+	 * @param applicationName Applikationsname
+	 * @param authentificationProcessName Klasse, die zur Authentifizierung genutzt werden soll
+	 * @param maxTelegramSize Maximale Telegrammgröße
+	 * @param receiveKeepAliveTimeout KeepAlive-Timeout beim Empfang von Telegrammen in Millisekunden.
+	 * @param sendKeepAliveTimeout KeepAlive-Timeout beim Versand von Telegrammen in Millisekunden.
+	 * @param outputBufferSize Größe des Sendepuffers in Bytes, der bei der Kommunikation mit dem Datenverteiler eingesetzt wird.
+	 * @param inputBufferSize Größe des Empfangspuffers in Bytes, der bei der Kommunikation mit dem Datenverteiler eingesetzt wird.
+	 * @param communicationProtocolName Klassenname des zu verwendenden Kommunikationsprotokolls
+	 * @param allowHmacAuthentication Ob die alte Authentifizierung erlaubt ist
+	 * @param encryptionPreference Art der Verschlüsselung 
+	 * @throws MissingParameterException Bei formalen Fehlern beim Lesen der Aufrufargumente oder der Defaultwerte.
+	 */
+	public ClientDavParameters(
+			String configurationPid, String address, int subAddress, String userName, String applicationName,
+			final String authentificationProcessName, final int maxTelegramSize, final long receiveKeepAliveTimeout, final long sendKeepAliveTimeout,
+			final int outputBufferSize, final int inputBufferSize, final String communicationProtocolName, final boolean allowHmacAuthentication, final EncryptionConfiguration encryptionPreference) throws MissingParameterException {
 		_communicationParameters = new CommunicationParameters();
 		_configurationPath = null;
 		_configurationPid = configurationPid;
 		_address = address;
 		_subAddress = subAddress;
 		_userName = userName;
-		_userPassword = userPassword;
 		_applicationName = applicationName;
-
+		_userProperties = null;
+		
 		if(_subAddress < 0) {
 			throw new MissingParameterException("Die Subadresse muss grösser gleich 0 sein");
 		}
@@ -1006,6 +921,8 @@ public class ClientDavParameters implements Cloneable{
 		_communicationParameters.setThroughputControlInterval(CommunicationConstant.THROUGHPUT_CONTROL_INTERVAL);
 		_communicationParameters.setMinimumThroughput(CommunicationConstant.MINIMUM_THROUGHPUT);
 		_incarnationName = "";
+		_allowHmacAuthentication = allowHmacAuthentication;
+		_encryptionPreference = encryptionPreference;
 		try {
 			if(communicationProtocolName == null) {
 				throw new IllegalStateException("Kommunikationsprotokollname ist null.");
@@ -1417,14 +1334,25 @@ public class ClientDavParameters implements Cloneable{
 		return _userName;
 	}
 
+
+	// Regulärer Ausdruck zur Zerlegung eines übergebenen "Benutzernamen"s in Benutzernamen und Einmalpasswort-Index
+	static final Pattern USERNAME_PASSWORD_INDEX_PATTERN = Pattern.compile("^(.+)-(\\d+)$");
+	
 	/**
-	 * Setzt den bei der {@link ClientDavInterface#login() Authentifizierung} zu verwendenden Benutzernamen.
+	 * Setzt den bei der {@link ClientDavInterface#login() Authentifizierung} zu verwendenden Benutzernamen (und ggf. den Passwortindex).
 	 *
 	 * @param userName Name des Benutzers.
 	 */
 	public final void setUserName(String userName) {
 		checkReadonly();
 		if(userName != null) {
+			Matcher matcher = USERNAME_PASSWORD_INDEX_PATTERN.matcher(userName);
+			int passwordIndex = -1;
+			if(matcher.matches()){
+				userName = matcher.group(1);
+				passwordIndex = Integer.parseInt(matcher.group(2));
+			}
+			_passwordIndex = passwordIndex;
 			_userName = userName;
 		}
 	}
@@ -1433,21 +1361,56 @@ public class ClientDavParameters implements Cloneable{
 	 * Bestimmt das bei der {@link ClientDavInterface#login() Authentifizierung} zu verwendende Passwort.
 	 *
 	 * @return Passwort des Benutzers.
+	 * 
+	 * @deprecated {@link #getClientCredentials()} erlaubt auch das Abfragen von Login-Token
 	 */
+	@Deprecated
 	public final String getUserPassword() {
-		return _userPassword;
+		ClientCredentials clientCredentials = getClientCredentials();
+		if(clientCredentials == null) return "";
+		
+		// toString() statt getPassword(), damit keine Exception geworfen wird 
+		return clientCredentials.toString();
 	}
 
 	/**
 	 * Setzt das bei der {@link ClientDavInterface#login() Authentifizierung} zu verwendende Passwort.
 	 *
 	 * @param userPassword Passwort des Benutzers.
+	 *                     
+	 * @deprecated Das Passwort bitte direkt bei {@link ClientDavInterface#login(String, ClientCredentials)} übergeben.     
 	 */
+	@Deprecated
 	public final void setUserPassword(String userPassword) {
-		checkReadonly();
-		if(userPassword != null) {
-			_userPassword = userPassword;
+		setUserProperties((userName, suffix) -> ClientCredentials.ofPassword(userPassword.toCharArray()));
+	}
+
+	/**
+	 * Gibt das Passwort oder den Login-Token zur Anmeldung am Datenverteiler zurück
+	 * @return Passwort oder Login-Token oder null falls noch nicht gesetzt
+	 */
+	public ClientCredentials getClientCredentials() {
+		if(_userProperties != null) {
+			return _userProperties.getClientCredentials(_userName);
 		}
+		return null;
+	}
+
+	/**
+	 * Setzt die Authentifizierungsdatei/Passwortdatenbank
+	 * @param userProperties Authentifizierungsdatei/Passwortdatenbank
+	 */
+	public void setUserProperties(final UserProperties userProperties) {
+		checkReadonly();
+		_userProperties = userProperties;
+	}
+
+	/** 
+	 * Gibt die Authentifizierungsdatei bzw. Passwortdatenbank zurück
+	 * @return die Authentifizierungsdatei bzw. Passwortdatenbank
+	 */
+	public UserProperties getUserProperties() {
+		return _userProperties;
 	}
 
 	/**
@@ -1690,6 +1653,40 @@ public class ClientDavParameters implements Cloneable{
 		return _communicationParameters;
 	}
 
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn die alte Hmac-basierte Authentifizierung erlaubt ist
+	 * @return <tt>true</tt>, wenn die alte Hmac-basierte Authentifizierung erlaubt ist, sonst <tt>false</tt>
+	 */
+	public boolean isHmacAuthenticationAllowed() {
+		return _allowHmacAuthentication;
+	}
+
+	/** 
+	 * Gibt die bevorzugte Verschlüsselungskonfiguration zurück.
+	 * @return die bevorzugte Verschlüsselungskonfiguration
+	 */
+	public EncryptionConfiguration getEncryptionPreference() {
+		return _encryptionPreference;
+	}
+
+	/**
+	 * Setzt, ob die alte Hmac-Authentifizierugn erlaubt sein soll
+	 * @param allowHmacAuthentication
+	 */
+	public void setAllowHmacAuthentication(final boolean allowHmacAuthentication) {
+		checkReadonly();
+		_allowHmacAuthentication = allowHmacAuthentication;
+	}
+
+	/**
+	 * Setzt ob die Verbindung verschlüsselt werden soll
+	 * @param encryptionPreference
+	 */
+	public void setEncryptionPreference(final EncryptionConfiguration encryptionPreference) {
+		checkReadonly();
+		_encryptionPreference = encryptionPreference;
+	}
+
 	/**
 	 * Setzt eine Aspektumleitung für eine Kombination von Attributgruppe und Aspekt. Ein von der Applikation angegebener Aspekt beim Anmelden, Lesen, Schreiben
 	 * und Abmelden einer Attributgruppe, wird durch einen anderen Aspekt ersetzt. Damit besteht die Möglichkeit den Datenfluß einer Applikation zu modifizieren
@@ -1818,6 +1815,10 @@ public class ClientDavParameters implements Cloneable{
 
 	public ClientDavParameters getSecondConnectionParameters() {
 		if(!_useSecondConnection) return null;
+		if(_passwordIndex != -1){
+			_debug.warning("Kann zweite Verbindung nicht verwenden, weil ein Einmalpasswort benutzt wird");
+			return null;
+		}
 		ClientDavParameters result = clone(false);
 		result.setApplicationName(result.getApplicationName() + "#");
 		result._isSecondConnection = true;
@@ -1825,6 +1826,30 @@ public class ClientDavParameters implements Cloneable{
 		return result;
 	}
 
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn es sich um die eigene Verbindung des Datenverteilers handelt
+	 * @return <tt>true</tt>, wenn es sich um die eigene Verbindung des Datenverteilers handelt, sonst <tt>false</tt>
+	 */
+	public boolean isSelfClientDavConnection() {
+		return false;
+	}
+
+	/** 
+	 * Gibt den Einmalpasswortindex zurück
+	 * @return den Einmalpasswortindex oder -1 für einen normalen Login
+	 */
+	public int getPasswordIndex() {
+		return _passwordIndex;
+	}
+
+	/**
+	 * Setzt den Einmalpasswortindex
+	 * @param passwordIndex Einmalpasswortindex oder -1 für einen normalen Login
+	 */
+	public void setPasswordIndex(final int passwordIndex) {
+		checkReadonly();
+		_passwordIndex = passwordIndex;
+	}
 
 	class AttributeGroupAspectObject {
 
@@ -1930,5 +1955,7 @@ public class ClientDavParameters implements Cloneable{
 		System.out.println("-aspekt=Attributesgruppepid(Zeichenkette):Aspektspid(Zeichenkette):Ersatzaspektpid(Zeichenkette)");
 		System.out.println("-simVariante=Ersatzsimulationsvariante(Zahl)");
 		System.out.println("-zweiteVerbindung=ja/nein");
+		System.out.println("-erlaubeHmacAuthentifizierung=ja/nein");
+		System.out.println("-verschluesselung=immer/automatisch/nein");
 	}
 }

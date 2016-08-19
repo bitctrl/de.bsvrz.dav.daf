@@ -10,4 +10,10 @@
     <componentDescriptors>
         <componentDescriptor>assemblies/distributionspaket-bin.xml</componentDescriptor>
     </componentDescriptors>
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/src/main/dist</directory>
+            <outputDirectory>/</outputDirectory>
+        </fileSet>
+    </fileSets>
 </assembly>

@@ -25,22 +25,21 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
-import de.bsvrz.sys.funclib.debug.Debug;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.DataNotSubscribedException;
 import de.bsvrz.dav.daf.main.SendSubscriptionNotConfirmed;
 import de.bsvrz.dav.daf.main.archive.ArchiveQueryResult;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
-
-import java.io.InputStream;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ByteArrayOutputStream;
-
+import de.bsvrz.dav.daf.main.impl.archive.ArchiveQueryID;
 import de.bsvrz.sys.funclib.dataSerializer.Deserializer;
-import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
 import de.bsvrz.sys.funclib.dataSerializer.Serializer;
+import de.bsvrz.sys.funclib.dataSerializer.SerializingFactory;
+import de.bsvrz.sys.funclib.debug.Debug;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Diese Klasse kann benutzt werden um ein Archivsystem aufzufordern seine Verwaltungsinformationen mit einem

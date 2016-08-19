@@ -35,7 +35,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * TCP/IP-Implementierung des Interfaces {@link de.bsvrz.dav.daf.communication.lowLevel.ConnectionInterface}.
@@ -169,5 +171,22 @@ public class TCP_IP_Communication implements ConnectionInterface {
 
 	public boolean isConnected() {
 		return _socket != null && _socket.isConnected() && !_socket.isClosed();
+	}
+
+	@Override
+	public boolean isLoopback() {
+		InetAddress inetAddress = _socket.getInetAddress();
+		if(inetAddress == null) {
+			_debug.warning("Kann Loopback-Status der Verbindung nicht bestimmen, da die Adresse null ist.");
+			return false;
+		}
+		try {
+			NetworkInterface networkInterface = NetworkInterface.getByInetAddress(inetAddress);
+			return networkInterface != null && networkInterface.isLoopback();
+		}
+		catch(SocketException e) {
+			_debug.warning("Kann Loopback-Status der Verbindung nicht bestimmen", e);
+			return false;
+		}
 	}
 }

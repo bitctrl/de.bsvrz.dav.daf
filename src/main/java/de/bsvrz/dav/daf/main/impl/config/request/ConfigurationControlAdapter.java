@@ -26,18 +26,19 @@
 
 package de.bsvrz.dav.daf.main.impl.config.request;
 
+import de.bsvrz.dav.daf.main.ClientDavConnection;
+import de.bsvrz.dav.daf.main.config.ConfigurationArea;
 import de.bsvrz.dav.daf.main.config.ConfigurationChangeException;
 import de.bsvrz.dav.daf.main.config.ConfigurationTaskException;
-import de.bsvrz.dav.daf.main.config.ConfigurationArea;
 import de.bsvrz.dav.daf.main.config.management.ConfigAreaAndVersion;
 import de.bsvrz.dav.daf.main.config.management.ConfigurationControl;
 import de.bsvrz.dav.daf.main.config.management.consistenycheck.ConsistencyCheckResultInterface;
 import de.bsvrz.dav.daf.main.impl.config.DafDataModel;
-import de.bsvrz.dav.daf.main.ClientDavConnection;
 import de.bsvrz.sys.funclib.debug.Debug;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
 
 // Kein Zugriff über ClientDavInterface, DataModel, das Objekt direkt erzeugen
 /**

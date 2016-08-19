@@ -27,7 +27,8 @@
 
 package de.bsvrz.dav.daf.main.config;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Schnittstelle zum Zugriff auf die Eigenschaften eines Konfigurationsobjektes. Konfigurationsobjekte haben neben den Eigenschaften aller System-Objekte eine

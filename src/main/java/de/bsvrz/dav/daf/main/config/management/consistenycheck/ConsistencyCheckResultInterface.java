@@ -27,7 +27,7 @@
 
 package de.bsvrz.dav.daf.main.config.management.consistenycheck;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Dieses Interface wird von Klassen implementiert, die das Ergebnis einer Konsistenzprüfung enthalten (siehe TPuK1-138).

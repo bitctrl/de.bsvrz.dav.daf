@@ -27,8 +27,8 @@
 
 package de.bsvrz.dav.daf.main.impl.config.telegrams;
 
-import de.bsvrz.dav.daf.main.impl.config.DafSystemObject;
 import de.bsvrz.dav.daf.main.impl.config.DafDataModel;
+import de.bsvrz.dav.daf.main.impl.config.DafSystemObject;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

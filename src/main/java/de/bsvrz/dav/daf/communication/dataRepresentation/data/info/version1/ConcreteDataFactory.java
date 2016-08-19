@@ -27,22 +27,22 @@
  */
 package de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1;
 
+import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeBaseValue;
+import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeBaseValueDataFactory;
+import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeHelper;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.DataFactory;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.byteArray.ByteArrayData;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.StreamFetcher;
 import de.bsvrz.dav.daf.main.Data;
-import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeBaseValueDataFactory;
 import de.bsvrz.dav.daf.main.config.AttributeGroup;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeBaseValue;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.StreamFetcher;
-import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeHelper;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 
-import java.util.List;
-import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Klasse, die zum Erzeugen von Datensätzen aus einem Byte-Array für die Serialisiererversion 1 verwendet wird.

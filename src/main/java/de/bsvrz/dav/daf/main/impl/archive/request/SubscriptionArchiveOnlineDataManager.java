@@ -25,28 +25,8 @@
  */
 package de.bsvrz.dav.daf.main.impl.archive.request;
 
-import de.bsvrz.dav.daf.main.ClientDavInterface;
-import de.bsvrz.dav.daf.main.ClientReceiverInterface;
-import de.bsvrz.dav.daf.main.DataDescription;
-import de.bsvrz.dav.daf.main.DataState;
-import de.bsvrz.dav.daf.main.Dataset;
-import de.bsvrz.dav.daf.main.ReceiveOptions;
-import de.bsvrz.dav.daf.main.ReceiverRole;
-import de.bsvrz.dav.daf.main.ResultData;
-import de.bsvrz.dav.daf.main.archive.ArchiveData;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKind;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataKindCombination;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataQueryResult;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataSpecification;
-import de.bsvrz.dav.daf.main.archive.ArchiveDataStream;
-import de.bsvrz.dav.daf.main.archive.ArchiveOrder;
-import de.bsvrz.dav.daf.main.archive.ArchiveQueryPriority;
-import de.bsvrz.dav.daf.main.archive.ArchiveRequestManager;
-import de.bsvrz.dav.daf.main.archive.ArchiveRequestOption;
-import de.bsvrz.dav.daf.main.archive.ArchiveTimeSpecification;
-import de.bsvrz.dav.daf.main.archive.DatasetReceiverInterface;
-import de.bsvrz.dav.daf.main.archive.HistoryTypeParameter;
-import de.bsvrz.dav.daf.main.archive.TimingType;
+import de.bsvrz.dav.daf.main.*;
+import de.bsvrz.dav.daf.main.archive.*;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.sys.funclib.debug.Debug;
@@ -124,6 +104,9 @@ public class SubscriptionArchiveOnlineDataManager {
 
 		final Receiver newReceiver = new Receiver(_archive, _connection, receiver, object, dataDescription, options, historyType, history);
 		// damit das Receiverobjekt in die Map eingefügt werden kann
+		if(dataDescription.getSimulationVariant() == -1) {
+			dataDescription = new DataDescription(dataDescription.getAttributeGroup(), dataDescription.getAspect(), _connection.getClientDavParameters().getSimulationVariant());
+		}
 		final ReceiverKey key = new ReceiverKey(receiver, object, dataDescription);
 
 		// Anmelden
@@ -136,10 +119,13 @@ public class SubscriptionArchiveOnlineDataManager {
 	}
 
 	public void unsubscribe(DatasetReceiverInterface receiver, SystemObject object, DataDescription dataDescription) throws ConfigurationException {
+		if(dataDescription.getSimulationVariant() == -1) {
+			dataDescription = new DataDescription(dataDescription.getAttributeGroup(), dataDescription.getAspect(), _connection.getClientDavParameters().getSimulationVariant());
+		}
 		final ReceiverKey key = new ReceiverKey(receiver, object, dataDescription);
 
 		synchronized (_receiverList) {
-			final Receiver abortReceiver = _receiverList.remove(key);
+			final Receiver abortReceiver = Objects.requireNonNull(_receiverList.remove(key), () -> "Keine passende Anmeldung gefunden, die abgemeldet werden könnte: " + key);
 			_connection.unsubscribeReceiver(abortReceiver, object, dataDescription);
 			abortReceiver.unsubscribeReceiver();
 		}
@@ -763,7 +749,7 @@ public class SubscriptionArchiveOnlineDataManager {
 
 			final ReceiverKey otherKey = (ReceiverKey) o;
 
-			return _receiver == otherKey.getReceiver() && _systemObject == otherKey.getSystemObject() && _dataDescription == otherKey.getDataDescription();
+			return _receiver == otherKey.getReceiver() && Objects.equals(_systemObject, otherKey.getSystemObject()) && Objects.equals(_dataDescription, otherKey.getDataDescription());
 		}
 
 		public int hashCode() {

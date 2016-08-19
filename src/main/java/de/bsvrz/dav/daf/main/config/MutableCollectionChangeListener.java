@@ -26,7 +26,7 @@
 
 package de.bsvrz.dav.daf.main.config;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Schnitstelle, die von der Applikation implementiert werden muss, um bei Änderungen der Elemente von dynamischen Mengen oder dynamischen Typen benachrichtigt

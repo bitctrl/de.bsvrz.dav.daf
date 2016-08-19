@@ -40,7 +40,6 @@ import de.bsvrz.dav.daf.main.impl.ConfigurationManager;
 import de.bsvrz.dav.daf.main.impl.config.request.ConfigurationRequester;
 import de.bsvrz.dav.daf.main.impl.config.request.RemoteRequestManager;
 import de.bsvrz.dav.daf.main.impl.config.request.RequestException;
-import de.bsvrz.dav.daf.main.impl.config.request.telegramManager.ConfigurationUserAdministration;
 import de.bsvrz.dav.daf.main.impl.config.telegrams.ConfigTelegram;
 import de.bsvrz.dav.daf.main.impl.config.telegrams.MetaDataAnswer;
 import de.bsvrz.dav.daf.main.impl.config.telegrams.MetaDataRequest;
@@ -67,10 +66,10 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 	private static final Debug _debug = Debug.getLogger();
 
 	/** Maximale Protokollversion (beginnend bei 0) */
-	public static final int MAX_PROTOCOL_VERSION = 1;
+	public static final int MAX_PROTOCOL_VERSION = 2;
 
 	/** Von der Konfiguration unterstützte Protokollversion <= MAX_PROTOCOL_VERSION */
-	private long _protocolVersion = 1;
+	private long _protocolVersion = 2;
 
 	/** Verbindung zum Datenverteiler. Wenn 2 Datenverteilerverbindungen verwendet werden die interne Verbindung. */
 	private ClientDavInterface _connection;
@@ -975,7 +974,7 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 		}
 		if(!objectsToRequest.isEmpty()){
 			List<SystemObject> objects = getSystemObjectsFromConfiguration(Longs.asArray(objectsToRequest));
-			for(int i = 0; i < result.size(); i++) {
+			for(int i = 0; i < objects.size(); i++) {
 				result.set(origPositions.get(i), objects.get(i));
 			}
 		}
@@ -1007,7 +1006,7 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 		}
 		if(!objectsToRequest.isEmpty()){
 			List<SystemObject> objects = getSystemObjectsFromConfiguration(objectsToRequest.toArray(new String[objectsToRequest.size()]));
-			for(int i = 0; i < objectsToRequest.size(); i++) {
+			for(int i = 0; i < objects.size(); i++) {
 				result.set(origPositions.get(i), objects.get(i));
 			}
 		}
@@ -1247,7 +1246,7 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 		// Das Objekt wird so spät wie möglich angelegt, damit alle Verbindungen initialisiert sind.
 		synchronized(this) {
 			if(_userAdministration == null) {
-				_userAdministration = new ConfigurationUserAdministration(getRequester());
+				_userAdministration = getRequester().getUserAdministration();
 			}
 		}
 		return _userAdministration;

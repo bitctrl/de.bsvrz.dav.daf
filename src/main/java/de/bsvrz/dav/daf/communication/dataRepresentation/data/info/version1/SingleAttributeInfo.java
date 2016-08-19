@@ -25,9 +25,9 @@
  */
 package de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1;
 
-import de.bsvrz.dav.daf.main.config.Attribute;
-import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeDefinitionInfo;
+import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
+import de.bsvrz.dav.daf.main.config.Attribute;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

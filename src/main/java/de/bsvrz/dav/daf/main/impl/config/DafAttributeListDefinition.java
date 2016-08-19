@@ -30,8 +30,8 @@ package de.bsvrz.dav.daf.main.impl.config;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 import de.bsvrz.dav.daf.main.config.Attribute;
-import de.bsvrz.dav.daf.main.config.ObjectSet;
 import de.bsvrz.dav.daf.main.config.AttributeListDefinition;
+import de.bsvrz.dav.daf.main.config.ObjectSet;
 
 import java.util.ArrayList;
 import java.util.Collections;

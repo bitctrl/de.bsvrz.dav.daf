@@ -26,11 +26,7 @@
 
 package de.bsvrz.dav.daf.util.fileBackedQueue;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 
 /**
  * Kapselt eine Datei für die FileSystemQueue

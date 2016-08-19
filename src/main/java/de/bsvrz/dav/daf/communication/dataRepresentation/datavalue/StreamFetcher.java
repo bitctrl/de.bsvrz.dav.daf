@@ -29,15 +29,12 @@
 package de.bsvrz.dav.daf.communication.dataRepresentation.datavalue;
 
 import de.bsvrz.dav.daf.communication.dataRepresentation.AttributeHelper;
-import de.bsvrz.dav.daf.main.config.Attribute;
-import de.bsvrz.dav.daf.main.config.AttributeGroup;
-import de.bsvrz.dav.daf.main.config.AttributeListDefinition;
-import de.bsvrz.dav.daf.main.config.AttributeType;
-import de.bsvrz.dav.daf.main.config.DataModel;
+import de.bsvrz.dav.daf.main.config.*;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Diese Klasse deserialisiert einen empfangenen Datensatz in entsprechende DataValue-Objekte.

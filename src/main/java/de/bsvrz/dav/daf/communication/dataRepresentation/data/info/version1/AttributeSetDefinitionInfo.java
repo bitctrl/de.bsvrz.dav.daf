@@ -28,13 +28,13 @@ package de.bsvrz.dav.daf.communication.dataRepresentation.data.info.version1;
 import de.bsvrz.dav.daf.communication.dataRepresentation.data.info.AttributeInfo;
 import de.bsvrz.dav.daf.main.config.Attribute;
 import de.bsvrz.dav.daf.main.config.AttributeSet;
-import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.config.AttributeType;
+import de.bsvrz.dav.daf.main.config.ConfigurationException;
 
-import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

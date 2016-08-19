@@ -6,7 +6,7 @@
 
     <groupId>de.bsvrz.dav</groupId>
     <artifactId>de.bsvrz.dav.daf</artifactId>
-    <version>3.8.0</version>
+    <version>3.9.1</version>
 
     <name>Datenverteiler-Applikationsfunktionen</name>
     <url>http://bitctrl.github.io/${project.artifactId}/</url>
@@ -15,9 +15,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
-        <kernsoftware.version>3.8.0</kernsoftware.version>
+        <kernsoftware.version>3.9.1</kernsoftware.version>
         <distributionspaket.status>FREI</distributionspaket.status>
-        <distributionspaket.standDatum>2016-05-31</distributionspaket.standDatum>
+        <distributionspaket.standDatum>2016-08-04</distributionspaket.standDatum>
         <distributionspaket.lizenz>LGPLv3.0</distributionspaket.lizenz>
     </properties>
 
@@ -126,6 +126,13 @@
             <artifactId>de.bsvrz.sys.funclib.commandLineArgs</artifactId>
             <version>${kernsoftware.version}</version>
         </dependency>
+		<dependency>
+    		<groupId>de.kappich</groupId>
+    		<artifactId>srp6a-kappich</artifactId>
+   			 <version>1.5.3</version>
+    		<scope>system</scope>
+    		<systemPath>${project.basedir}/src/main/dist/lib/srp6a-1.5.3-kappich.jar</systemPath>
+		</dependency>
     </dependencies>
 
     <build>
@@ -184,7 +191,7 @@
                                     <customClasspathLayout>../${artifact.artifactId}/${artifact.artifactId}-runtime.${artifact.extension}</customClasspathLayout>
                                 </manifest>
                                 <manifestEntries>
-                                    <Class-Path>${project.artifactId}.jar ${nonBsvrzClasspath}</Class-Path>
+                                    <Class-Path>${project.artifactId}.jar ${nonBsvrzClasspath} lib/srp6a-1.5.3-kappich.jar</Class-Path>
                                 </manifestEntries>
                             </archive>
                         </configuration>
@@ -287,7 +294,8 @@
                                 de.bsvrz.pua,
                                 de.bsvrz.sys,
                                 de.bsvrz.vew,
-                                de.bsvrz.pat
+                                de.bsvrz.pat,
+                                de.kappich
                             </excludeGroupIds>
                         </configuration>
                     </execution>
@@ -312,7 +320,8 @@
                                 de.bsvrz.pua,
                                 de.bsvrz.sys,
                                 de.bsvrz.vew,
-                                de.bsvrz.pat
+                                de.bsvrz.pat,
+                                de.kappich
                             </excludeGroupIds>
                         </configuration>
                     </execution>

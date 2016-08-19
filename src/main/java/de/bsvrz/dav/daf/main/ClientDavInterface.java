@@ -29,6 +29,7 @@
 package de.bsvrz.dav.daf.main;
 
 import de.bsvrz.dav.daf.main.archive.ArchiveRequestManager;
+import de.bsvrz.dav.daf.main.authentication.ClientCredentials;
 import de.bsvrz.dav.daf.main.config.*;
 
 import java.util.Collection;
@@ -84,7 +85,7 @@ public interface ClientDavInterface {
 	 *             Wenn bei der Kommunikation mit dem Datenverteiler Fehler aufgetreten sind.
 	 */
 	public void login() throws InconsistentLoginException, CommunicationError;
-	
+
 	/**
 	 * Start der logischen Verbindung mit dem Datenverteiler. Dabei wird eine Authentifizierung des Benutzers beim Datenverteiler durchgeführt und die logische
 	 * Verbindung in den Zustand <code>InBetrieb</code> überführt.
@@ -99,8 +100,39 @@ public interface ClientDavInterface {
 	 * @throws CommunicationError
 	 *             Wenn bei der Kommunikation mit dem Datenverteiler Fehler aufgetreten sind.
 	 */
-	public void login(String userName, String password) throws InconsistentLoginException, CommunicationError;
-	
+	void login(String userName, String password) throws InconsistentLoginException, CommunicationError;
+
+	/**
+	 * Start der logischen Verbindung mit dem Datenverteiler. Dabei wird eine Authentifizierung des Benutzers beim Datenverteiler durchgeführt und die logische
+	 * Verbindung in den Zustand <code>InBetrieb</code> überführt.
+	 * 
+	 * @param userName
+	 *            Name des Benutzers für die Authentifizierung.
+	 * @param password
+	 *            Passwort des Benutzers für die Authentifizierung.
+	 *            
+	 * @throws InconsistentLoginException
+	 *             Wenn Benutzername oder Passwort nicht korrekt sind.
+	 * @throws CommunicationError
+	 *             Wenn bei der Kommunikation mit dem Datenverteiler Fehler aufgetreten sind.
+	 */
+	default void login(String userName, final char[] password) throws InconsistentLoginException, CommunicationError{
+		login(userName, new String(password));
+	};
+
+	/**
+	 * Start der logischen Verbindung mit dem Datenverteiler. Dabei wird eine Authentifizierung des Benutzers beim Datenverteiler durchgeführt und die logische
+	 * Verbindung in den Zustand <code>InBetrieb</code> überführt.
+	 *
+	 * @param userName          Name des Benutzers für die Authentifizierung.
+	 * @param clientCredentials Passwort oder Login-Token
+	 * @throws InconsistentLoginException Wenn Benutzername oder Passwort nicht korrekt sind.
+	 * @throws CommunicationError         Wenn bei der Kommunikation mit dem Datenverteiler Fehler aufgetreten sind.
+	 */
+	default void login(String userName, final ClientCredentials clientCredentials) throws InconsistentLoginException, CommunicationError {
+		login(userName, new String(clientCredentials.getPassword()));
+	}
+
 	/**
 	 * Anmeldung zum Empfangen von Daten. Mit der Anmeldung wird von der Applikation ein Objekt bereitgestellt, daß bei nachfolgenden Aktualisierungen der Daten
 	 * entsprechend benachrichtigt wird.
@@ -645,7 +677,23 @@ public interface ClientDavInterface {
 	 * @return Stellvertreterobjekt zur Abwicklung von Archivanfragen über das spezifizierte Archivsystem.
 	 */
 	ArchiveRequestManager getArchive(SystemObject archiveSystem);
+
+	/**
+	 * Liefert den aktuellen Zustand der Verschlüsselung zurück
+	 * @return Zustand der Verschlüsselung
+	 */
+	default EncryptionStatus getEncryptionStatus() {
+		return EncryptionStatus.notEncrypted();
+	}
 	
+	/**
+	 * Liefert den aktuellen Zustand der Authentifizierung zurück
+	 * @return Zustand der Authentifizierung
+	 */
+	default AuthenticationStatus getAuthenticationStatus() {
+		return AuthenticationStatus.notAuthenticated();
+	}
+
 	/**
 	 * Bestimmt die Verbindungsparameter der Datenverteiler-Applikationsfunktionen.
 	 * Es wird eine schreibgeschützte Kopie zurückgegeben.

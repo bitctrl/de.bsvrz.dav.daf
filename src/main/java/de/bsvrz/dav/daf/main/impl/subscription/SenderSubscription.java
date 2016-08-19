@@ -27,13 +27,13 @@
 
 package de.bsvrz.dav.daf.main.impl.subscription;
 
+import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
+import de.bsvrz.dav.daf.communication.lowLevel.telegrams.SendSubscriptionInfo;
 import de.bsvrz.dav.daf.main.ClientSenderInterface;
 import de.bsvrz.dav.daf.main.DataDescription;
 import de.bsvrz.dav.daf.main.SenderRole;
-import de.bsvrz.dav.daf.main.config.SystemObject;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.SendSubscriptionInfo;
-import de.bsvrz.dav.daf.communication.lowLevel.telegrams.BaseSubscriptionInfo;
+import de.bsvrz.dav.daf.main.config.SystemObject;
 
 /**
  * 

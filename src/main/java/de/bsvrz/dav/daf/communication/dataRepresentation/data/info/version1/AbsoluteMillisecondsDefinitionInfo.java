@@ -29,7 +29,7 @@ import de.bsvrz.dav.daf.main.config.TimeAttributeType;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
 
 /**
  * Klasse, die noch zu dokumentieren ist.

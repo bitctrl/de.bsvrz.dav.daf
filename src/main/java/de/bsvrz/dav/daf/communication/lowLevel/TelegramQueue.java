@@ -26,6 +26,7 @@
 
 package de.bsvrz.dav.daf.communication.lowLevel;
 
+import java.util.Collection;
 import java.util.LinkedList;
 
 /**
@@ -101,6 +102,43 @@ public class TelegramQueue<Telegram extends QueueableTelegram> {
 			}
 		}
 		throw new IllegalStateException("Interner Fehler: Es wurde kein Telegramm gefunden, obwohl die Gesamtgröße " + _size + " ist");
+	}
+
+	/**
+	 * Gibt die ältesten in der Queue gespeicherten Telegramme zurück, so lange bis die summierte Telegrammlänge das angegebene Limit überschreitet
+	 * oder die Queue leer ist. Das erste Telegramm, was dafür sorgt, dass das Limit überschritten wird, wird mit zurückgegeben. Das bedeutet, dass
+	 * auch bei einem Limit von 0 immer (genau) ein Telegramm zurückgegeben wird.
+	 * @param sizeLimit    Anzahl Bytes, die diese Methode versucht mindestens zurückzugeben (solange in der Queue genug Daten da sind)
+	 * @param result       Liste in der die Telegramme zurückgegeben werden. Wird übergeben, damit nicht ständig eine neue Liste erstellt werden muss. Die Liste wird beim Aufruf der Methode geleert.
+	 * @return Anzahl Bytes der zurückgegebenen Telegramme oder -1 wenn die Queue geschlossen wurde
+	 * @throws InterruptedException
+	 */
+	public int takeMultiple(int sizeLimit, final Collection<Telegram> result) throws InterruptedException {
+		result.clear();
+		int aggregatedSize = 0;
+		synchronized(this) {
+			while(_size == 0) {
+				// Wenn die Queue leer ist und geschlossen wurde, wird -1 zurückgegeben
+				if(_closed) return -1;
+				// Wenn die Queue leer ist und nicht geschlossen wurde, wird gewartet
+				wait();
+			}
+			for(int i = _priorityLists.length - 1; i >= 0; i--) {
+				LinkedList<Telegram> priorityList = _priorityLists[i];
+				while(!priorityList.isEmpty()) {
+					final Telegram telegram = priorityList.removeFirst();
+					_size -= telegram.getSize();
+					aggregatedSize += telegram.getSize();
+					notifyAll();
+					result.add(telegram);
+					if(aggregatedSize > sizeLimit) return aggregatedSize;
+				}
+			}
+		}
+		if(result.isEmpty()) {
+			throw new IllegalStateException("Interner Fehler: Es wurde kein Telegramm gefunden, obwohl die Gesamtgröße " + _size + " ist");
+		}
+		return aggregatedSize;
 	}
 
 	/**

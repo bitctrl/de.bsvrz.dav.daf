@@ -100,8 +100,7 @@ public class TransmitterListsUpdate extends DataTelegram {
 			AttributeGroupAspectCombination _attributeGroupAspectsToAdd[],
 			AttributeGroupAspectCombination _attributeGroupAspectsToRemove[]
 	) {
-		
-		type = TRANSMITTER_LISTS_UPDATE_TYPE;
+		type = TRANSMITTER_LISTS_UPDATE_2_TYPE;
 		priority = CommunicationConstant.SYSTEM_TELEGRAM_PRIORITY;
 
 		delta = _delta;

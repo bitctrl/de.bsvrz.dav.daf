@@ -28,7 +28,11 @@
 package de.bsvrz.dav.daf.communication.lowLevel;
 
 import de.bsvrz.dav.daf.communication.lowLevel.telegrams.DataTelegram;
+import de.bsvrz.dav.daf.communication.srpAuthentication.SrpTelegramEncryption;
 import de.bsvrz.dav.daf.main.ConnectionException;
+import de.bsvrz.dav.daf.main.EncryptionStatus;
+
+import java.util.Collection;
 
 /**
  * Dieses Interface legt die öffentlichen Methoden der unteren Kommunikationsebene von Datenverteilerverbindungen fest.
@@ -127,5 +131,38 @@ public interface LowLevelCommunicationInterface {
 	 * @param name Name oder Identifikation des Kommunikationspartners
 	 */
 	void setRemoteName(final String name);
+
+	/**
+	 * Aktiviert die Verschlüsselung
+	 * @param encryption Verschlüsselung
+	 */
+	void enableEncryption(SrpTelegramEncryption encryption);
+
+	/**
+	 * Deaktiviert die Verschlüsselung
+	 */
+	void disableEncryption();
+
+	/**
+	 * Gibt den Verschlüsselungsstatus zurück
+	 *
+	 * @return den Verschlüsselungsstatus
+	 */
+	default EncryptionStatus getEncryptionStatus() {
+		return EncryptionStatus.notEncrypted();
+	}
+
+	/**
+	 * Sendet ein Telegramm direkt, wobei die SendeQueue umgangen wird. Das Telegramm muss versendet wurden sein, wenn die Methode verlassen wird
+	 * @param telegram Telegramm
+	 */
+	void sendDirect(DataTelegram telegram);
+	
+	/**
+	 * Sendet Telegramme direkt, wobei die SendeQueue umgangen wird. Das Telegramm muss versendet wurden sein, wenn die Methode verlassen wird
+	 * @param telegrams Telegramme
+	 */
+	void sendDirect(Collection<DataTelegram> telegrams);
+
 }
 

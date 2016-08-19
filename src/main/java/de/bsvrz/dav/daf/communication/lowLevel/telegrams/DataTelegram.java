@@ -172,6 +172,33 @@ public abstract class DataTelegram implements QueueableTelegram {
 
 	/** Telegrammtyp: Änderungsmitteilung zu Anmeldungslisten. */
 	public static final byte TRANSMITTER_LISTS_UPDATE_2_TYPE = 87;
+	
+	/** Telegrammtyp: SRP-Telegramm 1 Client -> Server */
+	public static final byte SRP_REQUEST_TYPE = 88;
+
+	/** Telegrammtyp: SRP-Telegramm 2 Server -> Client */
+	public static final byte SRP_ANSWER_TYPE = 89;
+
+	/** Telegrammtyp: SRP-Telegramm 3 Client -> Server */
+	public static final byte SRP_VALDIATE_REQUEST_TYPE = 90;
+
+	/** Telegrammtyp: SRP-Telegramm 4 Server -> Client */
+	public static final byte SRP_VALDIATE_ANSWER_TYPE = 91;
+
+	/** Telegramm zum Anfragen einer Applikation nach der SRP-Authentifizierung */
+	public static final byte APPLICATION_REQUEST_TYPE = 92;
+	
+	/** Telegramm zum Aufbauen einer Dav-Dav-Verbindung nach der SRP-Authentifizierung */
+	public static final byte TRANSMITTER_REQUEST_TYPE = 93;	
+	
+	/** Telegramm mit verschlüsseltem Inhalt */
+	public static final byte ENCRYPTED_TYPE = 94;
+	
+	/** Anfrage Verschlüsselung abschalten */
+	public static final byte DISABLE_ENCRYPTION_REQUEST_TYPE = 95;	
+	
+	/** Antwort Verschlüsselung abschalten */
+	public static final byte DISABLE_ENCRYPTION_ANSWER_TYPE = 96;
 
 	/** Der Telegrammtyp. */
 	protected byte type;
@@ -377,6 +404,33 @@ public abstract class DataTelegram implements QueueableTelegram {
 			}
 			case TRANSMITTER_LISTS_UPDATE_2_TYPE: {
 				return new TransmitterListsUpdate(TRANSMITTER_LISTS_UPDATE_2_TYPE);
+			}
+			case SRP_REQUEST_TYPE: {
+				return new SrpRequest();
+			}
+			case SRP_ANSWER_TYPE: {
+				return new SrpAnswer();
+			}
+			case SRP_VALDIATE_REQUEST_TYPE: {
+				return new SrpValidateRequest();
+			}
+			case SRP_VALDIATE_ANSWER_TYPE: {
+				return new SrpValidateAnswer();
+			}
+			case APPLICATION_REQUEST_TYPE: {
+				return new ApplicationRequest();
+			}
+			case TRANSMITTER_REQUEST_TYPE: {
+				return new TransmitterRequest();
+			}
+			case ENCRYPTED_TYPE: {
+				return new EncryptedTelegram();
+			}
+			case DISABLE_ENCRYPTION_REQUEST_TYPE: {
+				return new DisableEncryptionRequest();
+			}
+			case DISABLE_ENCRYPTION_ANSWER_TYPE: {
+				return new DisableEncryptionAnswer();
 			}
 			default: {
 				return null;

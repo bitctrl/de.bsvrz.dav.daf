@@ -268,6 +268,7 @@ public final class MiniList<E> implements List<E> {
 
 	@Override
 	public List<E> subList(final int fromIndex, final int toIndex) {
+		if(fromIndex < 0 || toIndex > size() || fromIndex > toIndex) throw new IndexOutOfBoundsException();
 		return new SubList(fromIndex, toIndex);
 	}
 

@@ -27,6 +27,10 @@
 
 package de.bsvrz.dav.daf.communication.lowLevel;
 
+import de.bsvrz.dav.daf.main.EncryptionConfiguration;
+
+import java.util.Objects;
+
 /**
  * Speichert die Eigenschaften einer Verbindung zum Datenverteiler.
  *
@@ -44,9 +48,6 @@ public class ConnectionProperties {
 	/** Der Benutzername */
 	private String _userName;
 
-	/** Das verschlüsselte Benutzer-Passwort */
-	private String _userPassword;
-
 	/** Die Zeit nach der spätestens ein keepalive Telegramm geschickt werden muss, wenn in dieser Zeit kein Telegramm empfangen wurde. */
 	private long _keepAliveSendTimeOut;
 
@@ -59,32 +60,43 @@ public class ConnectionProperties {
 	/** Die Grösse in Bytes des Empfangsbuffers */
 	private int _receiveBufferSize;
 
+	/**
+	 * Ob die alte Hmac-Authentifizierung erlaubt ist.
+	 */
+	private final boolean _allowHmacAuthentication;
 
+	/**
+	 * Bevorzugte Konfiguration der Verschlüsselung
+	 */
+	private final EncryptionConfiguration _encryptionPreference;
+	
 	/**
 	 * Dieser Konstruktor wird für Tests benötigt.
 	 */
 	public ConnectionProperties() {
+		_allowHmacAuthentication = true;
+		_encryptionPreference = EncryptionConfiguration.AlwaysEncrypted;
 	}
 
 	public ConnectionProperties(
 			LowLevelCommunicationInterface lowLevelCommunication,
 			AuthentificationProcess authentificationProcess,
 			String userName,
-			String userPassword,
 			long keepAliveSendTimeOut,
 			long keepAliveReceiveTimeOut,
 			int sendBufferSize,
-			int receiveBufferSize
-	) {
-
+			int receiveBufferSize,
+			final boolean allowHmacAuthentication, 
+			final EncryptionConfiguration encryptionPreference) {
 		_lowLevelCommunication = lowLevelCommunication;
 		_authentificationProcess = authentificationProcess;
 		_userName = userName;
-		_userPassword = userPassword;
 		_keepAliveSendTimeOut = keepAliveSendTimeOut;
 		_keepAliveReceiveTimeOut = keepAliveReceiveTimeOut;
 		_sendBufferSize = sendBufferSize;
 		_receiveBufferSize = receiveBufferSize;
+		_allowHmacAuthentication = allowHmacAuthentication;
+		_encryptionPreference = Objects.requireNonNull(encryptionPreference, "encryptionPreference == null");;
 	}
 
 	/**
@@ -139,24 +151,6 @@ public class ConnectionProperties {
 	 */
 	public final void setUserName(String userName) {
 		_userName = userName;
-	}
-
-	/**
-	 * Gibt das Benutzerpasswort zurück.
-	 *
-	 * @return das Benutzerpasswort
-	 */
-	public String getUserPassword() {
-		return _userPassword;
-	}
-
-	/**
-	 * Setzt das Benutzerpasswort auf den neuen Wert.
-	 *
-	 * @param userPassword das neue Benutzerpasswort
-	 */
-	public final void setUserPassword(String userPassword) {
-		_userPassword = userPassword;
 	}
 
 	/**
@@ -229,5 +223,21 @@ public class ConnectionProperties {
 	 */
 	public final void setReceiveBufferSize(int receiveBufferSize) {
 		_receiveBufferSize = receiveBufferSize;
+	}
+
+	/**
+	 * Gibt <tt>true</tt> zurück, wenn die alte Hmac-basierte Authentifizierung erlaubt ist
+	 * @return <tt>true</tt>, wenn die alte Hmac-basierte Authentifizierung erlaubt ist, sonst <tt>false</tt>
+	 */
+	public boolean isHmacAuthenticationAllowed() {
+		return _allowHmacAuthentication;
+	}
+
+	/**
+	 * Gibt die bevorzugte Verschlüsselungskonfiguration zurück.
+	 * @return die bevorzugte Verschlüsselungskonfiguration
+	 */
+	public EncryptionConfiguration getEncryptionPreference() {
+		return _encryptionPreference;
 	}
 }

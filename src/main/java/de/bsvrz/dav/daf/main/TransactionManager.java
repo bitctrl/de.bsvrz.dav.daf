@@ -28,11 +28,7 @@ package de.bsvrz.dav.daf.main;
 
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Klasse, die Transaktionen verwaltet.

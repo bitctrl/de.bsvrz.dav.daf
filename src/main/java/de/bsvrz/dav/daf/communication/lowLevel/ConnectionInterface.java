@@ -90,4 +90,14 @@ public interface ConnectionInterface {
 	 * @return <code>true</code>, falls eine Verbindung aufgebaut wurde, sonst <code>false</code>.
 	 */
 	public boolean isConnected();
+
+	/**
+	 * Gibt an, ob sich der Verbindungspartner auf dem selben System befindet (z.B. Adresse ist "127.0.0.1")
+	 * Diese Methode wird benutzt um festzustellen, ob die Verschlüsselung bei entsprechender Einstellung deaktiviert werden darf.
+	 * Diese Methode sollte daher im Zweifelsfall "false" zurückliefern.
+	 * @return true wenn es sich sicher um eine lokale Verbindung handelt, die nicht über das Netzwerk geht, sonst false
+	 */
+	public default boolean isLoopback(){
+		return false;
+	}
 }

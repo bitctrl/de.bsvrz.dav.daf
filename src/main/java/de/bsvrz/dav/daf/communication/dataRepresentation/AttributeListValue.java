@@ -27,13 +27,13 @@
 
 package de.bsvrz.dav.daf.communication.dataRepresentation;
 
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.AttributeListArrayAttribute;
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.AttributeListAttribute;
+import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 import de.bsvrz.dav.daf.main.config.Attribute;
 import de.bsvrz.dav.daf.main.config.AttributeListDefinition;
 import de.bsvrz.dav.daf.main.config.ConfigurationException;
 import de.bsvrz.dav.daf.main.config.DataModel;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.AttributeListArrayAttribute;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.AttributeListAttribute;
-import de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.DataValue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
