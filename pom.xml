@@ -131,7 +131,7 @@
     		<artifactId>srp6a-kappich</artifactId>
    			 <version>1.5.3</version>
     		<scope>system</scope>
-    		<systemPath>${project.basedir}/src/main/dist/lib/srp6a-1.5.3-kappich.jar</systemPath>
+    		<systemPath>${project.basedir}/src/main/resources/lib/srp6a-1.5.3-kappich.jar</systemPath>
 		</dependency>
     </dependencies>
 

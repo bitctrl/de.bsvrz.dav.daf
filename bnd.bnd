@@ -4,3 +4,4 @@
 -sources: true
 
 Bundle-Name: Datenverteiler-Applikationsfunktionen
+Bundle-ClassPath: ., lib/srp6a-1.5.3-kappich.jar
