@@ -12,8 +12,8 @@
     </componentDescriptors>
     <fileSets>
         <fileSet>
-            <directory>${project.basedir}/src/main/dist</directory>
-            <outputDirectory>/</outputDirectory>
+            <directory>${project.basedir}/src/main/resources/lib</directory>
+            <outputDirectory>/lib</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>
