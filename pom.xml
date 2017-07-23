@@ -189,7 +189,7 @@
                                     <customClasspathLayout>../${artifact.artifactId}/${artifact.artifactId}-runtime.${artifact.extension}</customClasspathLayout>
                                 </manifest>
                                 <manifestEntries>
-                                    <Class-Path>${project.artifactId}.jar ${nonBsvrzClasspath} lib/srp6a-1.5.3-kappich.jar</Class-Path>
+                                    <Class-Path>${project.artifactId}.jar ${nonBsvrzClasspath}</Class-Path>
                                 </manifestEntries>
                             </archive>
                         </configuration>
@@ -280,6 +280,31 @@
                         </goals>
                         <phase>prepare-package</phase>
                         <configuration>
+                            <excludeGroupIds>
+                                de.bsvrz.dav,
+                                de.bsvrz.kex,
+                                de.bsvrz.ars,
+                                de.bsvrz.dua,
+                                de.bsvrz.iav,
+                                de.bsvrz.ibv,
+                                de.bsvrz.ste,
+                                de.bsvrz.puk,
+                                de.bsvrz.pua,
+                                de.bsvrz.sys,
+                                de.bsvrz.vew,
+                                de.bsvrz.pat,
+                                de.kappich
+                            </excludeGroupIds>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-dependency-sources</id>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                        		<classifier>sources</classifier>
                             <excludeGroupIds>
                                 de.bsvrz.dav,
                                 de.bsvrz.kex,
