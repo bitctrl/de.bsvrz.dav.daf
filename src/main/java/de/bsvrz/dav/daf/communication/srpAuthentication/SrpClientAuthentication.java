@@ -99,7 +99,7 @@ public class SrpClientAuthentication {
 
 			// SRP Schritt 3
 			srp6ClientSession.step3(srpValidateAnswer.getM2());
-			return new AuthenticationResult(srp6ClientSession.getSessionKey(false), cryptoParams);
+			return new AuthenticationResult(srp6ClientSession.getSessionKey(), cryptoParams);
 		}
 		catch(SRP6Exception e){
 			String reason = "Unbekannter Fehler";

@@ -26,23 +26,51 @@
 
 package de.bsvrz.dav.daf.main;
 
+/**
+ * Zustand einer Anmeldung am Datenverteiler
+ *
+ * @author Kappich Systemberatung
+ */
 public enum SubscriptionState {
-	/** Anmeldung ans Sender/Quelle erfolgreich, aber keine Empfänger/Senke vorhanden */
+	/**
+	 * Die Anmeldung als Sender/Quelle ist erfolgreich, aber es sind keine Empfänger/Senke vorhanden.
+	 */
 	NoReceiversAvailable,
-	/** Anmeldung wegen fehlenden Rechten ungültig */
+	/**
+	 * Die Anmeldung ist wegen fehlenden Rechten nicht erlaubt.
+	 */
 	NotAllowed,
-	/** Anmeldung ungültig (z.B. bei mehreren Quellen/Senken) */
+	/**
+	 * Die Anmeldung ist ungültig (z.B. bei mehreren Quellen/Senken).
+	 */
 	InvalidSubscription,
-	/** Anmeldung als Empfänger/Senke erfolgreich, aber keine Quelle/Sender vorhanden */
+	/**
+	 * Die Anmeldung als Empfänger/Senke ist erfolgreich, aber es sind keine Quelle/Sender vorhanden.
+	 */
 	NoSendersAvailable,
-	/** Anmeldung als Empfänger/Senke erfolgreich, Quelle/Sender vorhanden */
+	/**
+	 * Anmeldung als Empfänger/Senke ist erfolgreich, Quelle/Sender sind vorhanden.
+	 */
 	SendersAvailable,
-	/** Anmeldung ans Sender/Quelle erfolgreich, Empfänger/Senke vorhanden */
+	/**
+	 * Anmeldung als Sender/Quelle ist erfolgreich, Empfänger/Senke sind vorhanden.
+	 */
 	ReceiversAvailable,
-	/** Anmeldung wartet auf Bestätigung von anderen Datenverteilern */
+	/**
+	 * Bei ausgehenden Anmeldungen zu anderen Zentraldatenverteilern:
+	 * Die Anmeldung wartet auf Rückmeldung von anderen Datenverteilern. Ist lokal keine Quelle/Senke vorhanden,
+	 * dann verschickt der lokale Datenverteiler Anmeldungen an verbundene potentielle Zentral-Datenverteiler.
+	 * Befindet sich eine Anmeldung in diesem Zustand, hat der verbundene Datenverteiler diese Anmeldung noch nicht quittiert.
+	 */
 	Waiting,
-	/** Entfernter Datenverteiler ist nicht zuständig für Daten */
+	/**
+	 * Bei ausgehenden Anmeldungen zu anderen Zentraldatenverteilern: Die angefragten Datenverteiler sind nicht zuständig für die Daten.
+	 */
 	NotResponsible,
-	/** Mehrere Datenverteiler sind zuständig, Anmeldung gesperrt */
+	/**
+	 * Bei ausgehenden Anmeldungen zu anderen Zentraldatenverteilern:  Mehrere verbundene Datenverteiler haben signalisiert,
+	 * dass sie der Zentraldatenverteiler sind. Diese Zustand ist ungültig
+	 * und sorgt dafür, dass die Anmeldung gesperrt ist, bis das Problem behoben wurde.
+	 */
 	MultiRemoteLock
 }

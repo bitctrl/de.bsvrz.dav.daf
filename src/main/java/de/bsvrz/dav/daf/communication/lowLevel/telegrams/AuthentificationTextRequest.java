@@ -135,23 +135,13 @@ public class AuthentificationTextRequest extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		applicationTypePid = in.readUTF();
-		applicationName = in.readUTF();
-		configurationPid = in.readUTF();
-		length = 0;
-		if(applicationName != null) {
-			length += applicationName.getBytes("UTF-8").length + 2;
-		}
-		if(applicationTypePid != null) {
-			length += applicationTypePid.getBytes("UTF-8").length + 2;
-		}
-		if(configurationPid != null) {
-			length += configurationPid.getBytes("UTF-8").length + 2;
-		}
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		applicationTypePid = DataTelegrams.checkAndReadUTF(in);
+		applicationName = DataTelegrams.checkAndReadUTF(in);
+		configurationPid = DataTelegrams.checkAndReadUTF(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
 }
 

@@ -222,6 +222,9 @@ public class SendSubscriptionInfo {
 	 * @return die Länge des Telegramms
 	 */
 	public short getLength() {
+		// Telegrammlänge ist fälschlicherweise 16, richtig wäre 20
+		// Telegrammlänge kann aus Kompatibilitätsgründen nicht geändert werden
+		
 		return 16;
 	}
 

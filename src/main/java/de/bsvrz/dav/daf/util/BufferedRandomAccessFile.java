@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 /**
  * Implementierung eines gepufferten {@link java.io.RandomAccessFile}. Diese Klasse implementiert die Interfaces
@@ -43,8 +44,7 @@ import java.nio.channels.FileChannel;
  * @author Kappich Systemberatung
  * @version $Revision$
  */
-public class BufferedRandomAccessFile implements DataInput, DataOutput, ByteChannel {
-	
+public class BufferedRandomAccessFile implements DataInput, DataOutput, SeekableByteChannel {
 
 	/** ungepufferter EingabeStream */
 	private final InputStream _rawInStream;
@@ -70,7 +70,7 @@ public class BufferedRandomAccessFile implements DataInput, DataOutput, ByteChan
 	/**
 	 * Größe des Lese und Schreibpuffers
 	 */
-	private int _bufferSize;
+	private final int _bufferSize;
 
 	/** Standardpuffergröße */
 	private static final int defaultBufferSize = 512;
@@ -196,7 +196,7 @@ public class BufferedRandomAccessFile implements DataInput, DataOutput, ByteChan
 	}
 
 	/**
-	 * Überspringt n genau Bytes.
+	 * Überspringt genau n Bytes.
 	 * Daher entspricht diese Methode <code>position(position() + n); return n;</code>
 	 *
 	 * Diese Methode kann über das Dateiende hinausspringen, vgl. {@link java.io.RandomAccessFile#seek(long)}.

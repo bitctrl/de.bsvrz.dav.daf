@@ -403,6 +403,8 @@ public interface Data extends Iterable<Data> {
 		 * Bestimmt das durch dieses Datum referenzierte System-Objekt.
 		 *
 		 * @return Stellvertreter-Objekt des referenzierten System-Objekts oder <code>null</code>, wenn kein Objekt referenziert wird.
+		 * 
+		 * @throws RuntimeException wenn die Datenverteilerverbindung nicht mehr existiert oder ein per ID referenziertes Objekt nicht aufgelöst werden konnte (KV nicht bekannt?)
 		 */
 		SystemObject getSystemObject();
 

@@ -64,16 +64,11 @@ import java.util.*;
 public final class CronDefinition {
 
 	private final BitSet _minutes = new BitSet(60); // Minuten 0-59
-	private final BitSet _hours = new BitSet(24);   // Stunden 0-32
+	private final BitSet _hours = new BitSet(24);   // Stunden 0-23
 	private final BitSet _days = new BitSet(31);    // Tage im Monat 0-30 (+1 Rechnen für richtigen Tag)
 	private final BitSet _months = new BitSet(12);  // Monate 0-11 (+1 Rechnen für richtigen Monat)
 	private final BitSet _dayOfWeek = new BitSet(7); // Wochentage mit 0=Sonntag, 1=Montag,...
-	private final ThreadLocal<Calendar> calendar = new ThreadLocal<Calendar>() {
-		@Override
-		protected Calendar initialValue() {
-			return Calendar.getInstance();
-		}
-	};
+	private final ThreadLocal<Calendar> calendar = ThreadLocal.withInitial(Calendar::getInstance);
 	private final String[] _segments;
 	
 	public static final CronDefinition EVERY_MINUTE = new CronDefinition("* * * * *");
@@ -307,9 +302,17 @@ public final class CronDefinition {
 			else if(split.length == 2) {
 				int myMin = parseInt(split[0]);
 				int myMax = parseInt(split[1]);
-				if(myMin < min) throw new IllegalArgumentException();
-				if(myMax > max) throw new IllegalArgumentException();
-				setBits(bitSet, myMin, myMax, 1);
+				if(myMin <= myMax) {
+					if(myMin < min) throw new IllegalArgumentException();
+					if(myMax > max) throw new IllegalArgumentException();
+					setBits(bitSet, myMin, myMax, 1);
+				}
+				else {
+					if(myMax < min) throw new IllegalArgumentException();
+					if(myMin > max) throw new IllegalArgumentException();
+					setBits(bitSet, myMin, max, 1);	
+					setBits(bitSet, min, myMax, 1);	
+				}
 			}
 		}
 
@@ -320,12 +323,12 @@ public final class CronDefinition {
 
 	private static class MonthParser extends IntParser {
 
-		private SimpleDateFormat _dateFormat = new SimpleDateFormat("MMM", Locale.GERMANY);
+		private final ThreadLocal<SimpleDateFormat> _dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("MMM", Locale.GERMANY));
 
 		@Override
 		public int parseInt(final String s) {
 			try {
-				return _dateFormat.parse(s).getMonth();
+				return _dateFormat.get().parse(s).getMonth();
 			}
 			catch(ParseException e) {
 				try {
@@ -341,20 +344,21 @@ public final class CronDefinition {
 
 	private static class DoWParser extends IntParser {
 
-		private SimpleDateFormat _dateFormat = new SimpleDateFormat("EEE", Locale.GERMANY);
+		private final ThreadLocal<SimpleDateFormat> _dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("EEE", Locale.GERMANY));
 
 		@Override
 		public int parseInt(final String s) {
 			try {
-				return _dateFormat.parse(s).getDay();
+				return _dateFormat.get().parse(s).getDay();
 			}
 			catch(ParseException e) {
 				try {
 					return super.parseInt(s) % 7;
 				}
-				catch(IllegalArgumentException ignored){
-					//e.addSuppressed(ignored);
-					throw new IllegalArgumentException(e);
+				catch(IllegalArgumentException e2){
+					IllegalArgumentException exception = new IllegalArgumentException(e);
+					exception.addSuppressed(e2);
+					throw exception;
 				}
 			}
 		}

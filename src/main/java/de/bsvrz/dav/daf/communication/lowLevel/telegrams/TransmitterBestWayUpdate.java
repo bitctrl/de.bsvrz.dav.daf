@@ -104,11 +104,12 @@ public class TransmitterBestWayUpdate extends DataTelegram {
 		int _length = in.readShort();
 		length = 2;
 		int size = in.readShort();
+		if(_length - length < size * 12 ) throw new IOException("Falsche Telegrammlänge (zu klein für " + size + " Array-Elemente");
 		if(size > 0) {
 			_routingUpdates = new RoutingUpdate[size];
 			for(int i = 0; i < size; ++i) {
 				_routingUpdates[i] = new RoutingUpdate();
-				_routingUpdates[i].read(in);
+				_routingUpdates[i].read(in, _length - length);
 				length += _routingUpdates[i].getLength();
 			}
 		}

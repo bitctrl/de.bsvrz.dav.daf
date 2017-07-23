@@ -99,16 +99,12 @@ public class SrpRequest extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_userName = in.readUTF();
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_userName = DataTelegrams.checkAndReadUTF(in);
 		_passwordIndex = in.readInt();
-		
-		length = 0;
-		length += _userName.getBytes(StandardCharsets.UTF_8).length + 2;
-		length += 4;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
 	
 }

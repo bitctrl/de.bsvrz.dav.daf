@@ -46,11 +46,11 @@ public interface ObjectSetUse extends ConfigurationObject {
 	public String getObjectSetName();
 
 	/**
-	 * Bestimmt den Typ dieser Menge. Der Mengentyp enthält Beschränkungen über den
-	 * Typ und die Anzahl der in einer Menge enthaltenen Objekte und eine
-	 * Information darüber, ob Elemente online hinzugefügt oder entfernt werden
-	 * dürfen. Die Methode entspricht mit Ausnahme des Rückgabetyps der Methode
-	 * {@link SystemObject#getType}.
+	 * Liefert den Mengen-Typ, den eine Menge dieser Verwendung haben muss.
+	 * Der Mengentyp enthält Beschränkungen über den Typ und die Anzahl der 
+	 * in einer Menge enthaltenen Objekte und eine Information darüber, ob 
+	 * Elemente online hinzugefügt oder entfernt werden
+	 * dürfen. 
 	 *
 	 * @return Mengentyp einer Menge dieser Verwendung.
 	 */

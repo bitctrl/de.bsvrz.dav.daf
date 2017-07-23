@@ -187,22 +187,21 @@ public class TransmitterDataSubscriptionReceipt extends DataTelegram {
 
 	public final void read(DataInputStream in) throws IOException {
 		int _length = in.readShort();
+		if(_length < 26) throw new IOException("Falsche Telegrammlänge (zu klein)");
 		_baseSubscriptionInfo = new BaseSubscriptionInfo();
 		_baseSubscriptionInfo.read(in);
 		_subscriptionState = in.readByte();
 		length = 26;
 		int size = in.readShort();
+		length += (size * 8);
+		if(_length != length) throw new IOException("Falsche Telegrammlänge (Länge " + _length + " passt nicht zu size " + size + ")");
 		if(size != 0) {
 			_transmitterList = new long[size];
 			for(int i = 0; i < size; ++i) {
 				_transmitterList[i] = in.readLong();
 			}
-			length += (_transmitterList.length * 8);
 		}
 		_receipt = in.readByte();
 		_transmitterId = in.readLong();
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
 	}
 }

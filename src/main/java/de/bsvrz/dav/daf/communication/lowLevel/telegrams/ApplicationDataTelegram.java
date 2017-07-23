@@ -373,7 +373,7 @@ public class ApplicationDataTelegram extends DataTelegram implements DataTelegra
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
+		int readLength = in.readShort();
 		telegramNumber = in.readShort();
 		totalTelegramCount = in.readShort();
 		baseSubscriptionInfo = new BaseSubscriptionInfo();
@@ -381,30 +381,29 @@ public class ApplicationDataTelegram extends DataTelegram implements DataTelegra
 		dataNumber = in.readLong();
 		delayedDataFlag = in.readBoolean();
 		length = 31;
-		int size;
+		int attributsIndicatorLength;
 		if(telegramNumber == 0) {
 			dataTime = in.readLong();
 			errorFlag = in.readByte();
-			size = in.readByte();
+			attributsIndicatorLength = in.readUnsignedByte();
 			length += 10;
-			if(size > 0) {
-				attributesIndicator = new byte[size];
-				for(int i = 0; i < size; ++i) {
+			length += attributsIndicatorLength;
+			if(readLength < length) throw new IOException("Falsche Telegrammlänge (Indikatorbitfeld passt nicht ins Anwendungsdatentelegramm)");
+			if(attributsIndicatorLength > 0) {
+				attributesIndicator = new byte[attributsIndicatorLength];
+				for(int i = 0; i < attributsIndicatorLength; ++i) {
 					attributesIndicator[i] = in.readByte();
 				}
-				length += attributesIndicator.length;
 			}
 		}
-		size = in.readInt();
-		if(size > 0) {
-			data = new byte[size];
-			for(int i = 0; i < size; ++i) {
+		int dataFragmentLength = in.readInt();
+		length += dataFragmentLength;
+		if(readLength != length) throw new IOException("Falsche Telegrammlänge (Länge " + readLength + " passt nicht zu size " + dataFragmentLength + ")");
+		if(dataFragmentLength > 0) {
+			data = new byte[dataFragmentLength];
+			for(int i = 0; i < dataFragmentLength; ++i) {
 				data[i] = in.readByte();
 			}
-			length += data.length;
-		}
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
 		}
 		priority = TelegramUtility.getPriority(this);
 		checkConsistency();

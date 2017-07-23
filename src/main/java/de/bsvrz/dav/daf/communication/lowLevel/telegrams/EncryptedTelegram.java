@@ -73,7 +73,7 @@ public class EncryptedTelegram extends DataTelegram {
 		if(_encryptedData.length > Short.MAX_VALUE) {
 			throw new IOException("Länge für verschlüsseltes Telegramm zu groß: " + _encryptedData.length);
 		}
-		length = _encryptedData.length + 2;
+		length = _encryptedData.length;
 	}
 	
 	/**
@@ -106,7 +106,7 @@ public class EncryptedTelegram extends DataTelegram {
 		byte[] data = new byte[dataLength];
 		in.readFully(data);
 		_encryptedData = data;
-		length = dataLength + 2;
+		length = dataLength;
 	}
 
 	@Override

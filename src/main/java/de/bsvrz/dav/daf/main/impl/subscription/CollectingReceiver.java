@@ -30,6 +30,7 @@ import de.bsvrz.dav.daf.communication.dataRepresentation.data.byteArray.ByteArra
 import de.bsvrz.dav.daf.main.ClientReceiverInterface;
 import de.bsvrz.dav.daf.main.Data;
 import de.bsvrz.dav.daf.main.ResultData;
+import de.bsvrz.sys.funclib.debug.Debug;
 
 import java.util.ArrayList;
 
@@ -52,6 +53,7 @@ public class CollectingReceiver {
 
 	private int _referenceCount = 0;
 
+	private static final Debug _debug = Debug.getLogger();
 
 	/** Erzeugt ein neues Objekt für den angegebenen Receiver */
 	public CollectingReceiver(final ClientReceiverInterface receiver) {
@@ -96,12 +98,17 @@ public class CollectingReceiver {
 			_collectedSize = 0;
 		}
 		if(results.length != 0) {
-			for(ResultData result : results) {
-				Data data = result.getData();
-				if(data instanceof ByteArrayData) {
-					ByteArrayData byteArrayData = (ByteArrayData) data;
-					byteArrayData.resolveReferences();
+			try {
+				for(ResultData result : results) {
+					Data data = result.getData();
+					if(data instanceof ByteArrayData) {
+						ByteArrayData byteArrayData = (ByteArrayData) data;
+						byteArrayData.resolveReferences();
+					}
 				}
+			}
+			catch(Exception e){
+				_debug.warning("Fehler beim Auflösen der in einem Datensatz enthaltenen Konfigurationsobjekte", e);
 			}
 			_receiver.update(results);
 		}

@@ -43,6 +43,8 @@ import java.io.IOException;
  */
 public class ProtocolVersionRequest extends DataTelegram {
 
+	
+
 	/** Die Liste der Versionen */
 	private int versions[];
 
@@ -120,18 +122,17 @@ public class ProtocolVersionRequest extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		length = 4;
-		int size = in.readInt();
-		if(size > 0) {
-			versions = new int[size];
-			for(int i = 0; i < size; ++i) {
+		final int readLength = in.readShort();
+		if(readLength < 4 ) throw new IOException("Falsche Telegrammlänge: " + readLength + " (zu klein)");
+		int numberOfVersionEntries = in.readInt();
+		final int calculatedLength = (1 + numberOfVersionEntries) * 4;
+		if(readLength != calculatedLength) throw new IOException("Falsche Telegrammlänge: " + readLength + " (passt nicht zur berechneten Länge (1 + Anzahl) * 4 : " + calculatedLength + ")" );
+		length = calculatedLength;
+		if(numberOfVersionEntries > 0) {
+			versions = new int[numberOfVersionEntries];
+			for(int i = 0; i < numberOfVersionEntries; ++i) {
 				versions[i] = in.readInt();
 			}
-			length += versions.length * 4;
-		}
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
 		}
 	}
 }

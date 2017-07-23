@@ -29,23 +29,21 @@ package de.bsvrz.dav.daf.main;
 import de.bsvrz.dav.daf.main.config.*;
 import de.bsvrz.sys.funclib.debug.Debug;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
- * TBD Dokumentation
+ * Optimierte Implementierung der Verwaltung dynamischer Objekte zur direkten Verwendung im Datenverteiler und in den DAF. Bietet die gleiche Kern-Funktionalität wie die de.bsvrz.sys.funclib.dynobj,
+ * aber keine erweiterten Möglichkeiten zum Anlegen/Löschen von Objekten.
  *
  * @author Kappich Systemberatung
  */
-public class DynamicTypeTable {
+class DynamicTypeTable {
 
 	/** der Standard-Konfigurationsbereich der AOE. */
 	private final ConfigurationArea _defaultArea;
 
 	/**
-	 * Typ "ty.dynamischesObjekt"
+	 * Typ "typ.dynamischesObjekt"
 	 */
 	private final DynamicObjectType _baseType;
 
@@ -81,18 +79,41 @@ public class DynamicTypeTable {
 		}
 		
 		final DataDescription parameterDataDescription = new DataDescription(atg, aspect);
-		final ResultData daten = connection.getData(authority, parameterDataDescription, 10_000L);
+		final ResultData initialData = connection.getData(authority, parameterDataDescription, 10_000L);
 		
 		final Updater updater = new Updater();
-		updater.update(daten);
+		updater.update(initialData);
 		connection.subscribeReceiver(updater, authority, parameterDataDescription, ReceiveOptions.normal(), ReceiverRole.receiver());
 	}
 
-	public ConfigurationArea getDefaultArea(final DynamicObjectType dynamicObjectType) {
+	/**
+	 * Gibt den Standardbereich für den übergebenen dynamischen Typ zurück
+	 * @param dynamicObjectType Zu prüfender Typ
+	 * @return Konfigurationsbereich in dem Objekte dieses Typs abgelegt werden sollen. (Kann in seltenen Fällen null sein, beispielsweise wenn kein Parameter vorhanden ist und {@link ConfigurationAuthority#getDefaultConfigurationArea()}
+	 * null zurückliefert.)
+	 */
+	ConfigurationArea getDefaultArea(final DynamicObjectType dynamicObjectType) {
 		Map<DynamicObjectType, ConfigurationArea> map = _typesToDefaultArea;
 		ConfigurationArea result = map.get(dynamicObjectType);
 		if(result != null) {
 			return result;
+		}
+		if(dynamicObjectType != null){
+			// Supertypen betrachten
+			final Set<SystemObjectType> seenTypes = new HashSet<>();
+			List<SystemObjectType> superTypes = dynamicObjectType.getSuperTypes();
+			while(superTypes.size() == 1){
+				SystemObjectType superType = superTypes.get(0);
+				if(!seenTypes.add(superType)) {
+					// Unendliche Schleife verhindern, typ bereits gesehen
+					break;
+				}
+				result = map.get(superType);
+				if(result != null) {
+					return result;
+				}
+				superTypes = superType.getSuperTypes();
+			}
 		}
 		result = map.get(_baseType);
 		if(result != null) {

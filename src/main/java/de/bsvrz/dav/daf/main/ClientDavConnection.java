@@ -63,7 +63,6 @@ import java.util.regex.Matcher;
  * @author Kappich Systemberatung
  * @version $Revision$
  */
-
 public class ClientDavConnection implements ClientDavInterface {
 
 	private static final Debug _debug = Debug.getLogger();
@@ -136,8 +135,10 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	private boolean _reinitializeOnConnect = false;
 
+	/** Konfigurations-Requester */
 	private ClientDavRequester _clientDavRequester = null;
 
+	/** Verwaltung für Transaktionen */
 	private TransactionManager _transactionManager = null;
 
 	/** Zweite Verbindung oder null */
@@ -145,8 +146,9 @@ public class ClientDavConnection implements ClientDavInterface {
 	
 	/** Synchronisierungs-Lock der Verbindung (bzw. gemeinsames Lock der 2 Verbindungen wenn eine zweite Verbindung benutzt wird */
 	private final Object _lock;
-	
-	private Map<ConfigurationAuthority, DynamicTypeTable> _dynamicTypeAreas = new HashMap<>();
+
+	/** Cache für Methode {@link #getDefaultConfigurationArea(DynamicObjectType)} */
+	private final Map<ConfigurationAuthority, DynamicTypeTable> _dynamicTypeAreas = Collections.synchronizedMap(new HashMap<>());
 	
 	/** Überprüfungscode zum prüfen des lokalen Passworts mit {@link #checkLoggedUserNameAndPassword(String, String)}. */
 	private SrpVerifierData _localVerifier = null;
@@ -1011,7 +1013,7 @@ public class ClientDavConnection implements ClientDavInterface {
 			throw new InitialisationNotCompleteException("Die Datenverteiler-Applikationsfunktionen sind noch nicht initialisiert.");
 		}
 		long userId = _subscriptionManager.getHighLevelCommunication().getUserId();
-		if(userId <= 0) {
+		if(!isLoggedIn()) {
 			throw new InitialisationNotCompleteException("Authentifizierung noch nicht erfolgreich.");
 		}
 		return (DynamicObject) _dataModel.getObject(userId);
@@ -1579,23 +1581,6 @@ public class ClientDavConnection implements ClientDavInterface {
 		return _subscriptionManager.getTimeStampFromSenderSubscription(info);
 	}
 
-	/**
-	 * Gibt Informationen über eine Datenanmeldung zurück
-	 *
-	 * @param davApplication Datenverteiler, der gefragt werden soll
-	 * @param object Systemobjekt
-	 * @param usage Attributgruppenverwendung
-	 * @param simulationVariant Simulationsvariante
-	 * @return Klasse mit Informationen über die angemeldeten Applikationen auf dieses Datum
-	 */
-	public ClientSubscriptionInfo getSubscriptionInfo(
-			final DavApplication davApplication, final SystemObject object, final AttributeGroupUsage usage, final short simulationVariant) throws IOException {
-		if(_clientDavRequester == null) {
-			_clientDavRequester = new ClientDavRequester(this);
-		}
-		return _clientDavRequester.getSubscriptionInfo(davApplication, object, usage, simulationVariant);
-	}
-
 	@Override
 	public EncryptionStatus getEncryptionStatus(){
 		if(_highLevelCommunication != null){
@@ -1614,32 +1599,59 @@ public class ClientDavConnection implements ClientDavInterface {
 
 	/**
 	 * Gibt den Standard-Konfigurationsbereich für den angegebenen dynamischen Typen zurück. Die Methode greift auf den Parameterdatensatz
-	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnng definiert sein,
-	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet
+	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnung definiert sein,
+	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet.
+	 * <p />
+	 * Diese Methode bietet die gleiche Kern-Funktionalität wie die de.bsvrz.sys.funclib.dynobj,
+	 * aber keine erweiterten Möglichkeiten zum Anlegen/Löschen von Objekten.
+	 * 
 	 * @param dynamicObjectType Typ 
-	 * @return Default-Bereich in dem Objekte dieses Type angelegt werden (nie null)
+	 * @return Default-Bereich in dem Objekte dieses Typs angelegt werden (kann in Ausnahmefällen null sein, wenn kein Parameter definiert wurde und kein Defaultbereich konfiguriert wurde)
 	 */
+	@Override
 	public ConfigurationArea getDefaultConfigurationArea(DynamicObjectType dynamicObjectType) {
 		return getDefaultConfigurationArea(dynamicObjectType, getLocalConfigurationAuthority());
 	}
 
 	/**
 	 * Gibt den Standard-Konfigurationsbereich für den angegebenen dynamischen Typen zurück. Die Methode greift auf den Parameterdatensatz
-	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnng definiert sein,
-	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet
+	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnung definiert sein,
+	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet.
+	 * <p />
+	 * Diese Methode bietet die gleiche Kern-Funktionalität wie die de.bsvrz.sys.funclib.dynobj,
+	 * aber keine erweiterten Möglichkeiten zum Anlegen/Löschen von Objekten.
+	 * 
 	 * @param dynamicObjectType Typ 
 	 * @param configurationAuthority Autarke Organisationseinheit
-	 * @return Default-Bereich in dem Objekte dieses Type angelegt werden
+	 * @return Default-Bereich in dem Objekte dieses Typs angelegt werden
 	 */
 	public ConfigurationArea getDefaultConfigurationArea(final DynamicObjectType dynamicObjectType, final ConfigurationAuthority configurationAuthority) {
 		Objects.requireNonNull(dynamicObjectType, "dynamicObjectType ist null");
 		Objects.requireNonNull(configurationAuthority, "configurationAuthority ist null");
 		
 		return _dynamicTypeAreas
-				.computeIfAbsent(configurationAuthority, (authority) -> new DynamicTypeTable(this, authority))
+				.computeIfAbsent(configurationAuthority, authority -> new DynamicTypeTable(this, authority))
 				.getDefaultArea(dynamicObjectType);
 	}
 
+	/**
+	 * Gibt Informationen über eine Datenanmeldung zurück
+	 *
+	 * @param davApplication Datenverteiler, der gefragt werden soll
+	 * @param object Systemobjekt
+	 * @param usage Attributgruppenverwendung
+	 * @param simulationVariant Simulationsvariante
+	 * @return Klasse mit Informationen über die angemeldeten Applikationen auf dieses Datum
+	 */
+	@Override
+	public ClientSubscriptionInfo getSubscriptionInfo(
+			final DavApplication davApplication, final SystemObject object, final AttributeGroupUsage usage, final short simulationVariant) throws IOException {
+		if(_clientDavRequester == null) {
+			_clientDavRequester = new ClientDavRequester(this);
+		}
+		return _clientDavRequester.getSubscriptionInfo(davApplication, object, usage, simulationVariant);
+	}
+	
 	/**
 	 * Gibt Informationen über die Datenanmeldungen einer Applikation zurück
 	 *
@@ -1648,6 +1660,7 @@ public class ClientDavConnection implements ClientDavInterface {
 	 *
 	 * @return Klasse mit Informationen über die angemeldeten Applikationen auf dieses Datum
 	 */
+	@Override
 	public ApplicationSubscriptionInfo getSubscriptionInfo(
 			final DavApplication davApplication, final ClientApplication application) throws IOException {
 		if(_clientDavRequester == null) {
@@ -1810,17 +1823,27 @@ public class ClientDavConnection implements ClientDavInterface {
 		return _transactionManager;
 	}
 
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn die Verbindung aufgebaut wurde
+	 * @return <tt>true</tt>, wenn die Verbindung aufgebaut wurde, sonst <tt>false</tt>
+	 */
+	@Override
 	public boolean isConnected() {
 		return _isConnected;
 	}
 
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn der Benutzer erfolgreich eingeloggt ist
+	 * @return <tt>true</tt>, wenn der Benutzer erfolgreich eingeloggt ist, sonst <tt>false</tt>
+	 */
+	@Override
 	public boolean isLoggedIn() {
 		return _isLoggedIn;
 	}
 
 	private static class ConnectionShutdownHook extends Thread {
 
-		// Verbindung über WeakReference referenzierten (um Memory Leak zu verhindern, wenn eine Verbindung nicht mehr benutzt wird)
+		// Verbindung über WeakReference referenzieren (um Memory Leak zu verhindern, wenn eine Verbindung nicht mehr benutzt wird)
 		private final WeakReference<ClientDavConnection> _conn;
 
 		public ConnectionShutdownHook(ClientDavConnection conn) {

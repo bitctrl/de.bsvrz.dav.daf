@@ -39,7 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Implementierung von Version 1 des Protokolls zur Kommunikation mit dem Datenverteiler. Die aktuelle Implementierugn befindet sich in
+ * Implementierung von Version 1 des Protokolls zur Kommunikation mit dem Datenverteiler. Die aktuelle Implementierung befindet sich in
  * RemoteRequester
  *
  * @author Kappich Systemberatung

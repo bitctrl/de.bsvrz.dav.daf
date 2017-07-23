@@ -240,18 +240,17 @@ public class SrpUserAdministration implements UserAdministration {
 			throw new RequestException("Fehler beim Erzeugen der Anfrage", e);
 		}
 	}
-	
+
 	/**
 	 * Prüft ein Data ob es den richtigen Nachrichtentyp enthält. Ist das Data vom richtigen Typ, wird das Byte-Array des DataŽs genommen und einem
 	 * Deserialisierer übergeben.
 	 *
 	 * @param reply               Antwort der Konfiguration auf einen Konfigurationsanfrage
 	 * @param expectedMessageType Typ des Telegramms, den die Konfiguration verschickt, wenn der Auftrag ohne Probleme bearbeitet werden konnte
-	 *
 	 * @return Objekt, über das Daten ausgelesen werden können
-	 *
-	 * @throws RequestException             Technischer Fehler auf Seiten der Konfiguration oder auf Seiten des Clients bei der Übertragung des Auftrags. Dieser
-	 *                                      Fehler ist nicht zu beheben.
+	 * @throws RequestException           Technischer Fehler auf Seiten der Konfiguration oder auf Seiten des Clients bei der Übertragung des Auftrags. Dieser
+	 *                                    Fehler ist nicht zu beheben.
+	 * @throws InconsistentLoginException Konfiguration verweigert Ausführung (wegen fehlender Rechte o.ä.)
 	 */
 	private static byte[] getMessage(Data reply, String expectedMessageType)
 			throws RequestException, InconsistentLoginException {
@@ -273,7 +272,7 @@ public class SrpUserAdministration implements UserAdministration {
 				throw new RequestException(errorMessage);
 			}
 			catch(IOException e) {
-				throw new RequestException("fehlerhafte FehlerAntwort empfangen", e);
+				throw new RequestException("Fehlerhafte FehlerAntwort empfangen", e);
 			}
 		}
 		else if("KonfigurationsänderungVerweigert".equals(messageType)) {
@@ -285,7 +284,7 @@ public class SrpUserAdministration implements UserAdministration {
 			catch(IOException e) {
 				// Die Antwort konnte nicht entschlüsselt werden
 				throw new RequestException(
-						"Die Konfiguration verweigert die Ausführung einer Konfigurationsänderung, aber der Grund konnte nicht entschlüsselt werden: " + e
+						"Die Konfiguration verweigert die Ausführung einer Konfigurationsänderung, aber der Grund konnte nicht entschlüsselt werden" , e
 				);
 			}
 		}
@@ -298,12 +297,12 @@ public class SrpUserAdministration implements UserAdministration {
 			catch(IOException e) {
 				// Die Antwort konnte nicht entschlüsselt werden
 				throw new RequestException(
-						"Die Konfiguration verweigert die Ausführung eines Auftrages, aber der Grund konnte nicht entschlüsselt werden: " + e
+						"Die Konfiguration verweigert die Ausführung eines Auftrages, aber der Grund konnte nicht entschlüsselt werden" , e
 				);
 			}
 		}
 		else {
-			throw new RequestException("falsche Antwort empfangen: " + messageType);
+			throw new RequestException("Falsche Antwort empfangen: " + messageType);
 		}
 	}
 
@@ -317,7 +316,7 @@ public class SrpUserAdministration implements UserAdministration {
 	 * @throws RequestException Fehler bei der Bearbeitung des Telegramms (Der Benutzer hatte nicht die nötigen Rechte diesen Auftrag zu erteilen, usw.)
 	 * @throws ConfigurationTaskException Fehler bei Bearbeitung des Auftrags auf Konfigurationsseite
 	 */
-	private byte[] sendUserAdministrationTask(final byte[] message) throws RequestException, ConfigurationTaskException, InconsistentLoginException {
+	private byte[] sendUserAdministrationTask(final byte[] message) throws RequestException, InconsistentLoginException {
 		int requestIndex;
 		try {
 			requestIndex = _senderUserAdministration.sendData("AuftragBenutzerverwaltung", message);

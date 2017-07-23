@@ -137,19 +137,17 @@ public class TransmitterAuthentificationRequest extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_authentificationProcess = in.readUTF();
-		_userName = in.readUTF();
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_authentificationProcess = DataTelegrams.checkAndReadUTF(in);
+		_userName = DataTelegrams.checkAndReadUTF(in);
 		int size = in.readInt();
+		if(in.available()<size) throw new IOException("Falsche Telegrammlänge (Passwort-Feld zu groß)");
 		_userPassword = new byte[size];
 		for(int i = 0; i < size; ++i) {
 			_userPassword[i] = in.readByte();
 		}
-		length = size + 4;
-		length += _authentificationProcess.getBytes("UTF-8").length + 2;
-		length += _userName.getBytes("UTF-8").length + 2;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
 }

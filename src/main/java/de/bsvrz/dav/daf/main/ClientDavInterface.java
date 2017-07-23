@@ -32,6 +32,7 @@ import de.bsvrz.dav.daf.main.archive.ArchiveRequestManager;
 import de.bsvrz.dav.daf.main.authentication.ClientCredentials;
 import de.bsvrz.dav.daf.main.config.*;
 
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -695,6 +696,61 @@ public interface ClientDavInterface {
 	}
 
 	/**
+	 * Gibt den Standard-Konfigurationsbereich für den angegebenen dynamischen Typen zurück. Die Methode greift auf den Parameterdatensatz
+	 * `atg.verwaltungDynamischerObjekte` zu. Sollte dieser nicht vorhanden sein oder für den angegebenen Typen keine Zuordnung definiert sein,
+	 * wird der Standardbereich des Konfigurationsverantwortlichen verwendet.
+	 * <p/>
+	 * Diese Methode bietet die gleiche Kern-Funktionalität wie die de.bsvrz.sys.funclib.dynobj,
+	 * aber keine erweiterten Möglichkeiten zum Anlegen/Löschen von Objekten.
+	 *
+	 * @param dynamicObjectType Typ
+	 * @return Default-Bereich in dem Objekte dieses Typs angelegt werden (kann in Ausnahmefällen null sein, wenn kein Parameter definiert wurde und kein Defaultbereich konfiguriert wurde)
+	 */
+	ConfigurationArea getDefaultConfigurationArea(DynamicObjectType dynamicObjectType);
+
+	/**
+	 * Gibt detaillierte Informationen über die bestehenden Datenanmeldungen an einer Datenidentifikation zurück. 
+	 * <p/>
+	 * Diese Abfrage greift auf interne Datenstrukturen im Datenverteiler zurück und 
+	 * ist ausschließlich für die Problemdiagnose und Überwachung gedacht.
+	 * Sie sollte nicht in der normalen Programmlogik eingesetzt werden.
+	 * <p/>
+	 * Insbesondere darf diese Abfrage nicht dazu verwendet werden, festzustellen, ob schon ein Programm
+	 * Daten zu einer Attributgruppenverwendung liefert. Hier wäre es weiterhin besser einen eigenen Sender 
+	 * oder Empfänger anzumelden und auf die Sendesteuerung bzw. empfangenen Datensätze zu reagieren. 
+	 *
+	 * @param davApplication Datenverteiler, der gefragt werden soll
+	 * @param object Systemobjekt, das die Anmeldung betrifft
+	 * @param usage Attributgruppenverwendung, für das die Anmeldungen am angegebenen Objekt ermittelt werden sollen
+	 * @param simulationVariant Simulationsvariante der zu ermittelnden Anmeldungen
+	 *                             
+	 * @return Klasse mit Informationen über die angemeldeten Applikationen auf dieses Datum
+	 */
+	ClientSubscriptionInfo getSubscriptionInfo(
+			DavApplication davApplication, SystemObject object, AttributeGroupUsage usage, short simulationVariant) throws IOException;
+
+	/**
+	 * Gibt Informationen über alle Datenanmeldungen einer Applikation zurück.
+	 * <p/>
+	 * Diese Abfrage greift auf interne Datenstrukturen im Datenverteiler zurück und 
+	 * ist ausschließlich für die Problemdiagnose und Überwachung gedacht.
+	 * Sie sollte nicht in der normalen Programmlogik eingesetzt werden.
+	 * <p/>
+	 * Insbesondere darf diese Abfrage nicht dazu verwendet werden, festzustellen, ob schon ein Programm
+	 * Daten zu einer Attributgruppenverwendung liefert. Hier wäre es weiterhin besser einen eigenen Sender 
+	 * oder Empfänger anzumelden und auf die Sendesteuerung bzw. empfangenen Datensätze zu reagieren. 
+	 * <p/>
+	 * Einige Applikationen melden sehr viele Daten an. Dadurch kann diese Anfrage entsprechend lange dauern.
+	 * 
+	 * @param davApplication Datenverteiler, der gefragt werden soll
+	 * @param application    Applikation von der vorhandene Anmeldungen abgefragt werden sollen
+	 *
+	 * @return Klasse mit Informationen über die angemeldeten Daten der Applikation
+	 */
+	ApplicationSubscriptionInfo getSubscriptionInfo(
+			DavApplication davApplication, ClientApplication application) throws IOException;
+
+	/**
 	 * Bestimmt die Verbindungsparameter der Datenverteiler-Applikationsfunktionen.
 	 * Es wird eine schreibgeschützte Kopie zurückgegeben.
 	 * 
@@ -753,4 +809,16 @@ public interface ClientDavInterface {
 	 * @return Klasse die Funktionen zu Transaktionen bietet
 	 */
 	Transactions getTransactions();
+
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn die Verbindung aufgebaut wurde
+	 * @return <tt>true</tt>, wenn die Verbindung aufgebaut wurde, sonst <tt>false</tt>
+	 */
+	boolean isConnected();
+
+	/** 
+	 * Gibt <tt>true</tt> zurück, wenn der Benutzer erfolgreich eingeloggt ist
+	 * @return <tt>true</tt>, wenn der Benutzer erfolgreich eingeloggt ist, sonst <tt>false</tt>
+	 */
+	boolean isLoggedIn();
 }

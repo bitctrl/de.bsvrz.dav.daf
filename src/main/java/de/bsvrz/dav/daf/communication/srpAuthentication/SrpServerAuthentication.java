@@ -107,7 +107,7 @@ public class SrpServerAuthentication {
 	 * @return den Sitzungsschlüssel
 	 */
 	public BigInteger getSessionKey() {
-		return _srp6ServerSession.getSessionKey(false);
+		return _srp6ServerSession.getSessionKey();
 	}
 
 	/**

@@ -90,10 +90,9 @@ public class TransmitterTerminateOrderTelegram extends DataTelegram {
 
 	public final void read(DataInputStream in) throws IOException {
 		int _length = in.readShort();
-		terminateOrderCause = in.readUTF();
-		length = terminateOrderCause.getBytes("UTF-8").length + 2;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		in = DataTelegrams.getTelegramStream(in, _length);
+		terminateOrderCause = DataTelegrams.checkAndReadUTF(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length = _length;
 	}
 }

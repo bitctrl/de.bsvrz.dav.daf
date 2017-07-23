@@ -119,7 +119,7 @@ public class TelegramUtility {
 	 * @return gibt einen vollständigen Datensatz zurück. Gibt null zurück wenn <code>IOException</code> geworfen wurde
 	 *
 	 * @throws IllegalArgumentException die Exception wird geworfen wenn:<br> - Übergabeparameter ist eine Referenz auf <code>null </code><br> - Die Länge des
-	 *                                  Übergabeparametrs stimmt nicht mit der erwarteten Länge überein.<br> - wenn ein Element des Arrays eien Referenz auf
+	 *                                  Übergabeparametrs stimmt nicht mit der erwarteten Länge überein.<br> - wenn ein Element des Arrays eine Referenz auf
 	 *                                  <code>null</code> ist.<br> - wenn ein Element an der falschen Position im Array steht.  <br>
 	 * @see #splitToApplicationTelegrams(de.bsvrz.dav.daf.communication.dataRepresentation.datavalue.SendDataObject)
 	 */

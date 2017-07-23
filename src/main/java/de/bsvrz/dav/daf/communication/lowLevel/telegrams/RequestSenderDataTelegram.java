@@ -122,6 +122,9 @@ public class RequestSenderDataTelegram extends DataTelegram {
 		dataInfo = new BaseSubscriptionInfo();
 		dataInfo.read(in);
 		state = in.readByte();
+		// Telegrammlänge ist fälschlicherweise 15, richtig wäre 19
+		// Telegrammlänge kann aus Kompatibilitätsgründen nicht geändert werden
+		
 		length = 15;
 		if(length != _length) {
 			throw new IOException("Falsche Telegrammlänge");

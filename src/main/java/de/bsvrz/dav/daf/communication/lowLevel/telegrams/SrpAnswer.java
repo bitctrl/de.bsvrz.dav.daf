@@ -147,15 +147,14 @@ public class SrpAnswer extends DataTelegram{
 	}
 
 	@Override
-	public void read(final DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_b = readBigInteger(in);
-		_s = readBigInteger(in);
-		_cryptoParamsString = in.readUTF();
-		length = 0;
-		length += _b.toByteArray().length + 2;
-		length += _s.toByteArray().length + 2;
-		length += _cryptoParamsString.getBytes(StandardCharsets.UTF_8).length + 2;
+	public void read(DataInputStream in) throws IOException {
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_b = DataTelegrams.checkAndReadBigInteger(in);
+		_s = DataTelegrams.checkAndReadBigInteger(in);
+		_cryptoParamsString = DataTelegrams.checkAndReadUTF(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length = telegramLength;
 		if(isValid()) {
 			try {
 				_cryptoParams = new SrpCryptoParameter(_cryptoParamsString);
@@ -163,9 +162,6 @@ public class SrpAnswer extends DataTelegram{
 			catch(IllegalArgumentException e) {
 				throw new IOException("Ungültige kryptographische Parameter", e);
 			}
-		}
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
 		}
 	}
 
@@ -181,13 +177,6 @@ public class SrpAnswer extends DataTelegram{
 		byte[] b_bytes = bigInteger.toByteArray();
 		out.writeShort(b_bytes.length);
 		out.write(b_bytes);
-	}
-
-	private static BigInteger readBigInteger(final DataInputStream in) throws IOException {
-		short length = in.readShort();
-		byte[] tmp = new byte[length];
-		in.readFully(tmp);
-		return new BigInteger(tmp);
 	}
 
 	public String getErrorMessage() {

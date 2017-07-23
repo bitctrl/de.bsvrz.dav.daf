@@ -230,7 +230,7 @@ public class ClientDavRequester extends DavRequester {
 			}
 			else{
 				try {
-					return new ClientSubscriptionInfo(_connection, usage, answer.getBytes());
+					return new ClientSubscriptionInfo(_connection, answer.getBytes());
 				}
 				catch(IOException e) {
 					_debug.warning("Fehler beim Verarbeiten der Anmelde-Informationen", e);
@@ -274,7 +274,7 @@ public class ClientDavRequester extends DavRequester {
 			}
 			else{
 				try {
-					return new ApplicationSubscriptionInfo(_connection, application, answer.getBytes());
+					return new ApplicationSubscriptionInfo(_connection, answer.getBytes());
 				}
 				catch(IOException e) {
 					_debug.warning("Fehler beim Verarbeiten der Anmelde-Informationen", e);

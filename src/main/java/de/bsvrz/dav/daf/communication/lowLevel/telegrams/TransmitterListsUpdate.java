@@ -271,48 +271,53 @@ public class TransmitterListsUpdate extends DataTelegram {
 		delta = in.readBoolean();
 		transmitterId = in.readLong();
 		length = 17;
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (zu kurz)");
 		int size = in.readShort();
+		length += (8 * size);
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (Länge " + _length + " passt nicht zu objectsToAdd-size " + size + ")");
 		if(size > 0) {
 			objectsToAdd = new long[size];
 			for(int i = 0; i < size; ++i) {
 				objectsToAdd[i] = in.readLong();
 			}
-			length += (8 * size);
 		}
 		size = in.readShort();
+		length += (8 * size);
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (Länge " + _length + " passt nicht zu objectsToRemove-size " + size + ")");
 		if(size > 0) {
 			objectsToRemove = new long[size];
 			for(int i = 0; i < size; ++i) {
 				objectsToRemove[i] = in.readLong();
 			}
-			length += (8 * size);
 		}
 		size = in.readShort();
+		if(type == TRANSMITTER_LISTS_UPDATE_2_TYPE) {
+			length += (8 * size);
+		}
+		else {
+			length += (4 * size);
+		}
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (Länge " + _length + " passt nicht zu attributeGroupAspectsToAdd-size " + size + ")");
 		if(size > 0) {
 			attributeGroupAspectsToAdd = new AttributeGroupAspectCombination[size];
 			for(int i = 0; i < size; ++i) {
 				attributeGroupAspectsToAdd[i] = new AttributeGroupAspectCombination();
 				attributeGroupAspectsToAdd[i].read(in);
 			}
-			if(type == TRANSMITTER_LISTS_UPDATE_2_TYPE) {
-				length += (8 * size);
-			}
-			else {
-				length += (4 * size);
-			}
 		}
 		size = in.readShort();
+		if(type == TRANSMITTER_LISTS_UPDATE_2_TYPE) {
+			length += (8 * size);
+		}
+		else {
+			length += (4 * size);
+		}
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (Länge " + _length + " passt nicht zu attributeGroupAspectsToRemove-size " + size + ")");
 		if(size > 0) {
 			attributeGroupAspectsToRemove = new AttributeGroupAspectCombination[size];
 			for(int i = 0; i < size; ++i) {
 				attributeGroupAspectsToRemove[i] = new AttributeGroupAspectCombination();
 				attributeGroupAspectsToRemove[i].read(in);
-			}
-			if(type == TRANSMITTER_LISTS_UPDATE_2_TYPE) {
-				length += (8 * size);
-			}
-			else {
-				length += (4 * size);
 			}
 		}
 		_debug.fine("Anmeldelistentelegramm empfangen: ", this);

@@ -127,16 +127,13 @@ public class ApplicationRequest extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_applicationTypePid = in.readUTF();
-		_applicationName = in.readUTF();
-		_configurationPid = in.readUTF();
-		length = 0;
-		length += _applicationName.getBytes(StandardCharsets.UTF_8).length + 2;
-		length += _applicationTypePid.getBytes(StandardCharsets.UTF_8).length + 2;
-		length += _configurationPid.getBytes(StandardCharsets.UTF_8).length + 2;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_applicationTypePid = DataTelegrams.checkAndReadUTF(in);
+		_applicationName = DataTelegrams.checkAndReadUTF(in);
+		_configurationPid = DataTelegrams.checkAndReadUTF(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
+
 }

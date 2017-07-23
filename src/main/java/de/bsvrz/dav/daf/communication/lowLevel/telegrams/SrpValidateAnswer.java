@@ -79,14 +79,12 @@ public class SrpValidateAnswer extends DataTelegram{
 	}
 
 	@Override
-	public void read(final DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_m2 = readBigInteger(in);
-		length = 0;
-		length += _m2.toByteArray().length + 2;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+	public void read(DataInputStream in) throws IOException {
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_m2 = DataTelegrams.checkAndReadBigInteger(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
 
 	@Override
@@ -99,13 +97,6 @@ public class SrpValidateAnswer extends DataTelegram{
 		byte[] b_bytes = bigInteger.toByteArray();
 		out.writeShort(b_bytes.length);
 		out.write(b_bytes);
-	}
-
-	private static BigInteger readBigInteger(final DataInputStream in) throws IOException {
-		short length = in.readShort();
-		byte[] tmp = new byte[length];
-		in.readFully(tmp);
-		return new BigInteger(tmp);
 	}
 
 	@Override

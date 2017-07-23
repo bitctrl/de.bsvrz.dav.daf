@@ -98,16 +98,17 @@ public class TransmitterListsSubscription extends DataTelegram {
 	public final void read(DataInputStream in) throws IOException {
 		int _length = in.readShort();
 		length = 2;
+		if(_length < length) throw new IOException("Falsche Telegrammlänge (zu kurz)");
 		int size = in.readShort();
+		length += (size * 8);
+		if(length != _length) {
+			throw new IOException("Falsche Telegram Länge");
+		}
 		if(size > 0) {
 			transmitterList = new long[size];
 			for(int i = 0; i < size; ++i) {
 				transmitterList[i] = in.readLong();
 			}
-			length += (transmitterList.length * 8);
-		}
-		if(length != _length) {
-			throw new IOException("Falsche Telegram Länge");
 		}
 	}
 }

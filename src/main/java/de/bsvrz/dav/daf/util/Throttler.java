@@ -73,8 +73,9 @@ public class Throttler {
 	 * 
 	 * Diese Klasse besitzt 2 Parameter:
 	 * 
-	 * - `throttlePerCall` gibt eine Zeitdauer an, die pro Login-Versuch in letzter Zeit gewartet wird.
-	 *   gibt es keinen Login-Versuch in letzter Zeit wird die Methode sofort verlassen.
+	 * - `throttlePerCall` gibt eine Zeitdauer an, die pro Login-Versuch in letzter Zeit gewartet wird. Gibt es beispielsweise in letzter Zeit 3 Login-Versuche, 
+	 *   dann wird beim nächsten Login-Versuch die Dauer 3 * `throttlePerCall` gewartet.
+	 *   Gibt es keinen Login-Versuch in letzter Zeit wird die Methode sofort verlassen.
 	 *   
 	 * - `maxThrottleDuration` gibt die maximale Wartezeit an, die ein Thread ausgebremst wird. Da immer nur ein Thread gleichzeitig warten kann,
 	 *   kann es bei mehreren parallelen Aufrufen der {@link #trigger()}-Methode zu entsprechend längeren Wartezeiten kommen (Anzahl Threads * `maxThrottleDuration`)
@@ -118,7 +119,7 @@ public class Throttler {
 
 	/**
 	 * Methode, deren Ausführung länger dauert, je öfter sie pro Zeitbereich aufgerufen wird. Siehe {@link #trigger()}. 
-	 * @param addToQueue Soll dieser Methodenaufruf dafür sorgen, dass folgende Aufrufe länger dauern (`true` ist standard, falls `false` wird nur gewartet)
+	 * @param addToQueue Soll dieser Methodenaufruf dafür sorgen, dass folgende Aufrufe länger dauern? (`true` ist standard, falls `false` wird nur gewartet)
 	 */
 	public void trigger(final boolean addToQueue) {
 		_lock.lock();

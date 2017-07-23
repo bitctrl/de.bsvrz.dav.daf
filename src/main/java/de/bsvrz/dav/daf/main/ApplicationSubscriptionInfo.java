@@ -29,6 +29,7 @@ package de.bsvrz.dav.daf.main;
 
 import de.bsvrz.dav.daf.main.config.AttributeGroupUsage;
 import de.bsvrz.dav.daf.main.config.ClientApplication;
+import de.bsvrz.dav.daf.main.config.DavApplication;
 import de.bsvrz.dav.daf.main.config.SystemObject;
 
 import java.io.ByteArrayInputStream;
@@ -36,11 +37,15 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
+ * Diese Klasse gibt die Anmeldungen einer Applikation am Datenverteiler zurück.
+ *
  * @author Kappich Systemberatung
  * @version $Revision: 11467 $
+ * @see ClientDavInterface#getSubscriptionInfo(DavApplication, ClientApplication)
  */
 public class ApplicationSubscriptionInfo {
 
@@ -50,19 +55,10 @@ public class ApplicationSubscriptionInfo {
 
 	private final List<ApplicationReceivingSubscription> _receiverSubscriptions = new ArrayList<ApplicationReceivingSubscription>();
 
-	public List<ApplicationSendingSubscription> getSenderSubscriptions() {
-		return Collections.unmodifiableList(_senderSubscriptions);
-	}
-
-	public List<ApplicationReceivingSubscription> getReceiverSubscriptions() {
-		return Collections.unmodifiableList(_receiverSubscriptions);
-	}
-
-	ApplicationSubscriptionInfo(final ClientDavConnection connection, final ClientApplication application, final byte[] bytes) throws IOException {
+	ApplicationSubscriptionInfo(final ClientDavConnection connection, final byte[] bytes) throws IOException {
 		_connection = connection;
 		final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
-		final DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
-		try {
+		try(DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream)) {
 			final int numReceivingSubscriptions = dataInputStream.readInt();
 			for(int i = 0; i < numReceivingSubscriptions; i++) {
 				final long objectId = dataInputStream.readLong();
@@ -71,9 +67,15 @@ public class ApplicationSubscriptionInfo {
 				final boolean isSource = dataInputStream.readBoolean();
 				final boolean isRequestSupported = dataInputStream.readBoolean();
 				final int state = dataInputStream.readInt();
-				final ApplicationSendingSubscription applicationSendingSubscription = new ApplicationSendingSubscription(objectId,
-						usageId, simVar, isSource, isRequestSupported, state
-				);
+				final ApplicationSendingSubscription applicationSendingSubscription =
+						new ApplicationSendingSubscription(
+								objectId,
+								usageId,
+								simVar,
+								isSource,
+								isRequestSupported,
+								state
+						);
 				_senderSubscriptions.add(applicationSendingSubscription);
 			}
 			final int numSendingSubscriptions = dataInputStream.readInt();
@@ -85,20 +87,63 @@ public class ApplicationSubscriptionInfo {
 				final boolean isDelayed = dataInputStream.readBoolean();
 				final boolean isDelta = dataInputStream.readBoolean();
 				final int state = dataInputStream.readInt();
-				final ApplicationReceivingSubscription applicationReceivingSubscription = new ApplicationReceivingSubscription(objectId,
-						usageId, simVar, isDrain, isDelayed, isDelta, state
-				);
+				final ApplicationReceivingSubscription applicationReceivingSubscription =
+						new ApplicationReceivingSubscription(
+								objectId,
+								usageId,
+								simVar,
+								isDrain,
+								isDelayed,
+								isDelta,
+								state
+						);
 				_receiverSubscriptions.add(applicationReceivingSubscription);
 			}
 		}
-		finally {
-			dataInputStream.close();
-		}
-		Collections.sort(_senderSubscriptions);
-		Collections.sort(_receiverSubscriptions);
+		_senderSubscriptions.sort(Comparator.<ApplicationSendingSubscription, String>comparing(it -> it.getUsage().getAttributeGroup().getNameOrPidOrId())
+				                          .thenComparing(it -> it.getUsage().getAspect().getNameOrPidOrId())
+				                          .thenComparing(it -> it.getObject().getNameOrPidOrId()));
+		_receiverSubscriptions.sort(Comparator.<ApplicationReceivingSubscription, String>comparing(it -> it.getUsage().getAttributeGroup().getNameOrPidOrId())
+				                            .thenComparing(it -> it.getUsage().getAspect().getNameOrPidOrId())
+				                            .thenComparing(it -> it.getObject().getNameOrPidOrId()));
 	}
 
-	public class ApplicationSendingSubscription implements Comparable<ApplicationSendingSubscription>  {
+	/**
+	 * Gibt alle sendenden Anmeldungen (Sender und Quellen) zurück
+	 *
+	 * @return alle sendenden Anmeldungen
+	 */
+	public List<ApplicationSendingSubscription> getSenderSubscriptions() {
+		return Collections.unmodifiableList(_senderSubscriptions);
+	}
+
+	/**
+	 * Gibt alle empfangenden Anmeldungen (Senken und Empfänger) zurück
+	 *
+	 * @return alle empfangenden Anmeldungen
+	 */
+	public List<ApplicationReceivingSubscription> getReceiverSubscriptions() {
+		return Collections.unmodifiableList(_receiverSubscriptions);
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder stringBuilder = new StringBuilder();
+		stringBuilder.append("Ankommende Anmeldungen:\n");
+		for(ApplicationReceivingSubscription receiverSubscription : _receiverSubscriptions) {
+			stringBuilder.append(receiverSubscription.toString()).append("\n");
+		}
+		stringBuilder.append("Ausgehende Anmeldungen:\n");
+		for(ApplicationSendingSubscription sendingSubscription : _senderSubscriptions) {
+			stringBuilder.append(sendingSubscription.toString()).append("\n");
+		}
+		return stringBuilder.toString();
+	}
+
+	/**
+	 * Informationen über eine Anmeldung, die Daten sendet
+	 */
+	public final class ApplicationSendingSubscription {
 
 		private final boolean _source;
 
@@ -116,8 +161,7 @@ public class ApplicationSubscriptionInfo {
 
 		private final AttributeGroupUsage _usage;
 
-
-		public ApplicationSendingSubscription(
+		ApplicationSendingSubscription(
 				final long objectId, final long usageId, final short simVar, final boolean source, final boolean requestSupported, final int state) {
 			_objectId = objectId;
 			_usageId = usageId;
@@ -152,34 +196,74 @@ public class ApplicationSubscriptionInfo {
 			}
 		}
 
+		/**
+		 * Gibt die Objekt-ID zurück, für das Daten angemeldet wurden
+		 *
+		 * @return die Objekt-ID
+		 */
 		public long getObjectId() {
 			return _objectId;
 		}
 
+		/**
+		 * Gibt die Attributgruppenverwendung zurück, für die Daten angemeldet wurden
+		 *
+		 * @return die Attributgruppenverwendung
+		 */
 		public long getUsageId() {
 			return _usageId;
 		}
 
+		/**
+		 * Gibt die Simulationsvariante der Anmeldung zurück
+		 *
+		 * @return die Simulationsvariante der Anmeldung
+		 */
 		public short getSimVar() {
 			return _simVar;
 		}
 
+		/**
+		 * Gibt das Objekt zurück, falls bekannt
+		 *
+		 * @return das Objekt oder null
+		 */
 		public SystemObject getObject() {
 			return _object;
 		}
 
+		/**
+		 * Gibt die Attributgruppenverwendung zurück, falls bekannt
+		 *
+		 * @return die Attributgruppenverwendung oder null
+		 */
 		public AttributeGroupUsage getUsage() {
 			return _usage;
 		}
 
+		/**
+		 * Gibt <tt>true</tt> zurück, wenn es sich um eine Quelle handelt
+		 *
+		 * @return <tt>true</tt>, wenn es sich um eine Quelle handelt, sonst (Sender) <tt>false</tt>
+		 */
 		public boolean isSource() {
 			return _source;
 		}
 
+		/**
+		 * Gibt <tt>true</tt> zurück, wenn Sendesteuerung benutzt wird
+		 *
+		 * @return <tt>true</tt>, wenn Sendesteuerung benutzt wird, sonst <tt>false</tt>
+		 */
 		public boolean isRequestSupported() {
 			return _requestSupported;
 		}
 
+		/**
+		 * Gibt den Zustand der Anmeldung zurück
+		 *
+		 * @return den Zustand
+		 */
 		public SubscriptionState getState() {
 			return _state;
 		}
@@ -188,19 +272,12 @@ public class ApplicationSubscriptionInfo {
 		public String toString() {
 			return _usage.getAttributeGroup().getPidOrNameOrId() + ":" + _usage.getAspect().getPidOrNameOrId() + ":" + _object.getPidOrNameOrId();
 		}
-
-		public int compareTo(final ApplicationSendingSubscription o) {
-			int tmp;
-			tmp = _usage.getAttributeGroup().getPidOrNameOrId().compareTo(o.getUsage().getAttributeGroup().getPidOrNameOrId());
-			if(tmp != 0) return tmp;
-			tmp = _usage.getAspect().getPidOrNameOrId().compareTo(o.getUsage().getAspect().getPidOrNameOrId());
-			if(tmp != 0) return tmp;
-			tmp = getObject().getPidOrNameOrId().compareTo(o.getObject().getPidOrNameOrId());
-			return tmp;
-		}
 	}
 
-	public class ApplicationReceivingSubscription implements Comparable<ApplicationReceivingSubscription> {
+	/**
+	 * Informationen über eine Anmeldung, die Daten empfängt
+	 */
+	public final class ApplicationReceivingSubscription {
 
 		private final boolean _drain;
 
@@ -220,7 +297,7 @@ public class ApplicationSubscriptionInfo {
 
 		private final AttributeGroupUsage _usage;
 
-		public ApplicationReceivingSubscription(
+		ApplicationReceivingSubscription(
 				final long objectId,
 				final long usageId,
 				final short simVar,
@@ -261,18 +338,38 @@ public class ApplicationSubscriptionInfo {
 			}
 		}
 
+		/**
+		 * Gibt <tt>true</tt> zurück, wenn es sich um eine Senke handelt
+		 *
+		 * @return <tt>true</tt>, wenn es sich um eine Senke handelt, sonst (Empfänger) <tt>false</tt>
+		 */
 		public boolean isDrain() {
 			return _drain;
 		}
 
+		/**
+		 * Gibt <tt>true</tt> zurück, wenn nachgelieferte Daten angefordert wurden
+		 *
+		 * @return <tt>true</tt>, wenn nachgelieferte Daten angefordert wurden, sonst <tt>false</tt>
+		 */
 		public boolean isDelayed() {
 			return _delayed;
 		}
 
+		/**
+		 * Gibt <tt>true</tt> zurück, wenn eine Delta-Anmeldung durchgeführt wurde
+		 *
+		 * @return <tt>true</tt>, wenn eine Delta-Anmeldung durchgeführt wurde, sonst <tt>false</tt>
+		 */
 		public boolean isDelta() {
 			return _delta;
 		}
 
+		/**
+		 * Gibt den Zustand der Anmeldung zurück
+		 *
+		 * @return den Zustand
+		 */
 		public SubscriptionState getState() {
 			return _state;
 		}
@@ -282,39 +379,49 @@ public class ApplicationSubscriptionInfo {
 			return _usage.getAttributeGroup().getPidOrNameOrId() + ":" + _usage.getAspect().getPidOrNameOrId() + ":" + _object.getPidOrNameOrId();
 		}
 
+		/**
+		 * Gibt die Objekt-ID zurück, für das Daten angemeldet wurden
+		 *
+		 * @return die Objekt-ID
+		 */
 		public long getObjectId() {
 			return _objectId;
 		}
 
+		/**
+		 * Gibt die Attributgruppenverwendung zurück, für die Daten angemeldet wurden
+		 *
+		 * @return die Attributgruppenverwendung
+		 */
 		public long getUsageId() {
 			return _usageId;
 		}
 
+		/**
+		 * Gibt die Simulationsvariante der Anmeldung zurück
+		 *
+		 * @return die Simulationsvariante der Anmeldung
+		 */
 		public short getSimVar() {
 			return _simVar;
 		}
 
+		/**
+		 * Gibt das Objekt zurück, falls bekannt
+		 *
+		 * @return das Objekt oder null
+		 */
 		public SystemObject getObject() {
 			return _object;
 		}
 
+		/**
+		 * Gibt die Attributgruppenverwendung zurück, falls bekannt
+		 *
+		 * @return die Attributgruppenverwendung oder null
+		 */
 		public AttributeGroupUsage getUsage() {
 			return _usage;
 		}
-
-		public int compareTo(final ApplicationReceivingSubscription o) {
-			int tmp;
-			tmp = _usage.getAttributeGroup().getPidOrNameOrId().compareTo(o.getUsage().getAttributeGroup().getPidOrNameOrId());
-			if(tmp != 0) return tmp;
-			tmp = _usage.getAspect().getPidOrNameOrId().compareTo(o.getUsage().getAspect().getPidOrNameOrId());
-			if(tmp != 0) return tmp;
-			tmp = getObject().getPidOrNameOrId().compareTo(o.getObject().getPidOrNameOrId());
-			return tmp;
-		}
-	}
-
-	@Override
-	public String toString() {
-		return "ApplicationSubscriptions{" + "_receiverSubscriptions=" + _senderSubscriptions + ", _senderSubscriptions=" + _receiverSubscriptions + '}';
 	}
 }

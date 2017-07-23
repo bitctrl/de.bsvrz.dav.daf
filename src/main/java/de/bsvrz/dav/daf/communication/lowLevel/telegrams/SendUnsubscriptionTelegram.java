@@ -87,6 +87,9 @@ public class SendUnsubscriptionTelegram extends DataTelegram {
 		int _length = in.readShort();
 		unsubscription = new BaseSubscriptionInfo();
 		unsubscription.read(in);
+		// Telegrammlänge ist fälschlicherweise 14, richtig wäre 18
+		// Telegrammlänge kann aus Kompatibilitätsgründen nicht geändert werden
+		
 		length = 14;
 		if(length != _length) {
 			throw new IOException("Falsche Telegrammlänge");

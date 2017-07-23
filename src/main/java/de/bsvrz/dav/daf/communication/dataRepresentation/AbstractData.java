@@ -62,10 +62,12 @@ public abstract class AbstractData implements Data {
 	public AbstractData() {
 	}
 
+	@Override
 	public Data createModifiableCopy() {
 		throw new IllegalStateException("getModifiableCopy(): Kopie kann nur von ganzen Datensätzen erzeugt werden, this: " + toString());
 	}
 
+	@Override
 	public Data createUnmodifiableCopy() {
 		throw new IllegalStateException("getUnmodifiableCopy(): Kopie kann nur von ganzen Datensätzen erzeugt werden, this: " + toString());
 	}
@@ -74,114 +76,138 @@ public abstract class AbstractData implements Data {
 		return getName() + ":" + valueToString();
 	}
 
+	@Override
 	public Data getItem(String itemName) {
-		Iterator i = iterator();
-		while(i.hasNext()) {
-			Data item = (Data)i.next();
+		for(final Data item : this) {
 			if(itemName.equals(item.getName())) return item;
 		}
 		throw new NoSuchElementException("Attribut " + itemName + " nicht im Datensatz enthalten: " + this);
 	}
 
+	@Override
 	public Data.Array getArray(String itemName) {
 		return getItem(itemName).asArray();
 	}
 
+	@Override
 	public Data.NumberValue getUnscaledValue(String itemName) {
 		return getItem(itemName).asUnscaledValue();
 	}
 
+	@Override
 	public Data.NumberArray getUnscaledArray(String itemName) {
 		return getItem(itemName).asUnscaledArray();
 	}
 
+	@Override
 	public Data.TimeValue getTimeValue(String itemName) {
 		return getItem(itemName).asTimeValue();
 	}
 
+	@Override
 	public Data.TimeArray getTimeArray(String itemName) {
 		return getItem(itemName).asTimeArray();
 	}
 
+	@Override
 	public Data.TextValue getTextValue(String itemName) {
 		return getItem(itemName).asTextValue();
 	}
 
+	@Override
 	public Data.TextArray getTextArray(String itemName) {
 		return getItem(itemName).asTextArray();
 	}
 
+	@Override
 	public Data.NumberValue getScaledValue(String itemName) {
 		return getItem(itemName).asScaledValue();
 	}
 
+	@Override
 	public Data.NumberArray getScaledArray(String itemName) {
 		return getItem(itemName).asScaledArray();
 	}
 
+	@Override
 	public Data.ReferenceValue getReferenceValue(String itemName) {
 		return getItem(itemName).asReferenceValue();
 	}
 
+	@Override
 	public Data.ReferenceArray getReferenceArray(String itemName) {
 		return getItem(itemName).asReferenceArray();
 	}
 
+	@Override
 	public Data.NumberValue asUnscaledValue() {
 		throw new UnsupportedOperationException("Attribut " + getName() + " kann nicht in einen unskaliertem Zahlwert dargestellt werden");
 	}
 
+	@Override
 	public Data.TimeValue asTimeValue() {
 		throw new UnsupportedOperationException("Attribut " + getName() + " kann nicht in einem Zeitwert dargestellt werden");
 	}
 
+	@Override
 	public Data.NumberValue asScaledValue() {
 		throw new UnsupportedOperationException("Attribut " + getName() + " kann nicht in einem skalierten Zahlwert dargestellt werden");
 	}
 
+	@Override
 	public Data.ReferenceValue asReferenceValue() {
 		throw new UnsupportedOperationException("Attribut " + getName() + " kann nicht in einem Referenzwert dargestellt werden");
 	}
 
+	@Override
 	public Data.NumberArray asUnscaledArray() {
 		return asArray().asUnscaledArray();
 	}
 
+	@Override
 	public Data.TimeArray asTimeArray() {
 		return asArray().asTimeArray();
 	}
 
+	@Override
 	public Data.TextArray asTextArray() {
 		return asArray().asTextArray();
 	}
 
+	@Override
 	public Data.NumberArray asScaledArray() {
 		return asArray().asScaledArray();
 	}
 
+	@Override
 	public Data.ReferenceArray asReferenceArray() {
 		return asArray().asReferenceArray();
 	}
 
+	@Override
 	public Data.Array asArray() {
 		throw new UnsupportedOperationException("Attribut " + getName() + " kann nicht in einem Array dargestellt werden");
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData</code>. */
+	/** Subklasse von <code>AbstractData</code>. */
 	public abstract static class PlainData extends AbstractData {
 
+		@Override
 		public boolean isPlain() {
 			return true;
 		}
 
+		@Override
 		public boolean isList() {
 			return false;
 		}
 
+		@Override
 		public boolean isArray() {
 			return false;
 		}
 
+		@Override
 		public String valueToString() {
 			try {
 				if(isDefined()) return asTextValue().getText();
@@ -193,29 +219,31 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public Iterator<Data> iterator() {
 			throw new java.lang.UnsupportedOperationException("Über das Attribut " + getName() + " kann nicht iteriert werden");
 		}
 	}
 
-	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData</code>. */
+	/** Subklasse von <code>AbstractData</code>. */
 	public abstract static class StructuredData extends AbstractData {
 
+		@Override
 		public boolean isPlain() {
 			return false;
 		}
 
+		@Override
 		public Data.TextValue asTextValue() {
 			throw new UnsupportedOperationException("Attributliste " + getName() + " kann nicht in einem Textwert dargestellt werden");
 		}
 
+		@Override
 		public boolean isDefined() {
 			// Es handelt sich um eine Liste oder ein Array, alle Elemente durchlaufen und
 			// ebenfalls prüfen.
-			final Iterator iterator = iterator();
 
-			while(iterator.hasNext()) {
-				final Data data = (Data)iterator.next();
+			for(final Data data : this) {
 				if(!data.isDefined()) {
 					return false;
 				}
@@ -223,6 +251,7 @@ public abstract class AbstractData implements Data {
 			return true;
 		}
 
+		@Override
 		public void setToDefault() {
 			// Ist das Objekt ein Array, so muss:
 			// - bei Arrays mit variabler Länge die Länge auf 0 gesetzt werden
@@ -239,33 +268,34 @@ public abstract class AbstractData implements Data {
 
 			// Sowohl bei Arrays als auch bei Listen müssen alle Elemente mit ihrem Defaultwert (oder undefiniert)
 			// initialisiert werden.
-
-			final Iterator iterator = iterator();
-			while(iterator.hasNext()) {
-				((Data)iterator.next()).setToDefault();
+			for(final Data data : this) {
+				data.setToDefault();
 			}
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.StructuredData</code>. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.StructuredData</code>. */
 	public abstract static class ListData extends StructuredData {
 
+		@Override
 		public boolean isList() {
 			return true;
 		}
 
+		@Override
 		public boolean isArray() {
 			return false;
 		}
 
+		@Override
 		public String valueToString() {
 			StringBuffer result = new StringBuffer();
 			result.append("{");
 			try {
-				Iterator i = iterator();
+				Iterator<Data> i = iterator();
 				while(i.hasNext()) {
 					try {
-						Data item = (Data)i.next();
+						Data item = i.next();
 						result.append(item.toString());
 					}
 					catch(Exception e) {
@@ -282,25 +312,28 @@ public abstract class AbstractData implements Data {
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.StructuredData</code>. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.StructuredData</code>. */
 	public abstract static class ArrayData extends StructuredData {
 
+		@Override
 		public boolean isList() {
 			return false;
 		}
 
+		@Override
 		public boolean isArray() {
 			return true;
 		}
 
+		@Override
 		public String valueToString() {
 			StringBuffer result = new StringBuffer();
 			result.append("[");
 			try {
-				Iterator i = iterator();
+				Iterator<Data> i = iterator();
 				while(i.hasNext()) {
 					try {
-						Data item = (Data)i.next();
+						Data item = i.next();
 						result.append(item.valueToString());
 					}
 					catch(Exception e) {
@@ -317,13 +350,15 @@ public abstract class AbstractData implements Data {
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, implementiert das Interface <code>Data.TextValue</code>. */
+	/** Subklasse von <code>AbstractData</code>, implementiert das Interface <code>Data.TextValue</code>. */
 	public abstract static class TextValue implements Data.TextValue {
 
+		@Override
 		public String getSuffixText() {
 			return "";
 		}
 
+		@Override
 		public String getText() {
 			String valueText = getValueText();
 			String suffixText = getSuffixText();
@@ -337,7 +372,7 @@ public abstract class AbstractData implements Data {
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.TextValue</code>, implementiert das Interface <code>Data.NumberValue</code>. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.TextValue</code>, implementiert das Interface <code>Data.NumberValue</code>. */
 	public abstract static class NumberValue extends AbstractData.TextValue implements Data.NumberValue {
 
 		private static final NumberFormat _parseNumberFormat = NumberFormat.getNumberInstance();
@@ -350,62 +385,77 @@ public abstract class AbstractData implements Data {
 			_parseNumberFormat.setGroupingUsed(false);
 		}
 
+		@Override
 		public boolean isNumber() {
 			return true;
 		}
 
+		@Override
 		public boolean isState() {
 			return getState() != null;
 		}
 
+		@Override
 		public byte byteValue() {
 			throw new UnsupportedOperationException("Attribut  kann nicht im gewüschten Zahlentyp dargestellt werden");
 		}
 
+		@Override
 		public short shortValue() {
 			return (short)byteValue();
 		}
 
+		@Override
 		public int intValue() {
 			return (int)shortValue();
 		}
 
+		@Override
 		public long longValue() {
 			return (long)intValue();
 		}
 
+		@Override
 		public float floatValue() {
 			return (float)doubleValue();
 		}
 
+		@Override
 		public double doubleValue() {
 			return (double)longValue();
 		}
 
+		@Override
 		public IntegerValueState getState() {
 			return null;
 		}
 
+		@Override
 		public void setState(IntegerValueState state) {
 			throw new UnsupportedOperationException("Beim Attribut sind keine Zustände erlaubt");
 		}
 
+		@Override
 		public void set(int value) {
 			set((long)value);
 		}
 
+		@Override
 		public void set(long value) {
 			set((double)value);
 		}
 
+		@Override
 		public void set(float value) {
 			set((double)value);
 		}
 
+		@Override
 		public void set(double value) {
 			throw new UnsupportedOperationException("gewünschte Wertkonvertierung nicht erlaubt");
 		}
 
+		@Override
 		public void setText(String text) {
 			Number number;
 			ParsePosition parsePosition = new ParsePosition(0);
@@ -438,6 +488,7 @@ public abstract class AbstractData implements Data {
 		 * @see SystemObject#getPid
 		 * @see SystemObject#getId
 		 */
+		@Override
 		public String getValueText() {
 			try {
 				SystemObject object = getSystemObject();
@@ -467,6 +518,7 @@ public abstract class AbstractData implements Data {
 		 * @see #getSuffixText
 		 * @see #getText
 		 */
+		@Override
 		public String getSuffixText() {
 			try {
 				String name = null;
@@ -497,6 +549,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void setText(String text) {
 			int startIndex;
 			boolean tryPid = true;
@@ -560,6 +613,7 @@ public abstract class AbstractData implements Data {
 			throw new IllegalArgumentException("Der Text '" + text + "' kann nicht als Objektreferenz interpretiert werden.");
 		}
 
+		@Override
 		public SystemObject getSystemObject() {
 			try {
 				long id = getId();
@@ -590,6 +644,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void setSystemObjectPid(String objectPid, ObjectLookup datamodel) {
 			final SystemObject systemObject;
 			if(objectPid.length() == 0) systemObject = null;
@@ -608,12 +663,14 @@ public abstract class AbstractData implements Data {
 			setSystemObject(systemObject);
 		}
 
+		@Override
 		public void setSystemObjectPid(final String objectPid) {
 			setSystemObjectPid(objectPid, getDataModel());
 		}
 
 		abstract boolean tryToStorePid(final String objectPid);
 
+		@Override
 		public String getSystemObjectPid() {
 			final SystemObject systemObject = getSystemObject();
 			if(systemObject == null) {
@@ -627,14 +684,15 @@ public abstract class AbstractData implements Data {
 		abstract String getStoredPid();
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.TextValueext</code> zur Bestimmung der Zeit. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.TextValueext</code> zur Bestimmung der Zeit. */
 	private abstract static class TimeValue extends AbstractData.TextValue implements Data.TimeValue {
 
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.TimeValue</code> der Relativen(vergangenen) Zeit. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.TimeValue</code> der Relativen(vergangenen) Zeit. */
 	public abstract static class RelativeTimeValue extends AbstractData.TimeValue {
 
+		@Override
 		public String getValueText() {
 			try {
 				StringBuffer text = new StringBuffer();
@@ -722,6 +780,7 @@ public abstract class AbstractData implements Data {
 
 		private static final String _relPattern = "(?:" + _relNumberNamePattern + ")|(?:" + _relNameNumberPattern + ")";
 
+		@Override
 		public void setText(String text) {
 			String[] splitted = text.trim().split(_relPattern);
 			long number;
@@ -757,14 +816,16 @@ public abstract class AbstractData implements Data {
 			setMillis(millis);
 		}
 
+		@Override
 		public String getSuffixText() {
 			return "";
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstarctData.AbsoluteTimeValue</code> zur Bestimmung der Systemzeit in Millisekunden. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.AbsoluteTimeValue</code> zur Bestimmung der Systemzeit in Millisekunden. */
 	public abstract static class AbsoluteMillisTimeValue extends AbsoluteTimeValue {
 
+		@Override
 		public String getValueText() {
 			try {
 				Date date = new Date(getMillis());
@@ -778,9 +839,10 @@ public abstract class AbstractData implements Data {
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.AbsoluteTimeValue</code> zur Bestimmung der Systemzeit in Sekunden. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.AbsoluteTimeValue</code> zur Bestimmung der Systemzeit in Sekunden. */
 	public abstract static class AbsoluteSecondsTimeValue extends AbsoluteTimeValue {
 
+		@Override
 		public String getValueText() {
 			try {
 				Date date = new Date(getMillis());
@@ -794,9 +856,10 @@ public abstract class AbstractData implements Data {
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, abgeleitet von <code>AbstractData.TimeValue</code> zur Bestimmmung der Systemzeit. */
+	/** Subklasse von <code>AbstractData</code>, abgeleitet von <code>AbstractData.TimeValue</code> zur Bestimmmung der Systemzeit. */
 	private abstract static class AbsoluteTimeValue extends AbstractData.TimeValue {
 
+		@Override
 		public void setText(String text) {
 			DateFormat format;
 			Date date;
@@ -818,78 +881,95 @@ public abstract class AbstractData implements Data {
 			);
 		}
 
+		@Override
 		public String getSuffixText() {
 			return "Uhr";
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, implementiert das Interface <code>Data.Array</code>. */
+	/** Subklasse von <code>AbstractData</code>, implementiert das Interface <code>Data.Array</code>. */
 	abstract public static class Array implements Data.Array {
 
+		@Override
 		public Data.NumberValue[] getUnscaledValues() {
 			return asUnscaledArray().getValues();
 		}
 
+		@Override
 		public Data.NumberValue getUnscaledValue(int itemIndex) {
 			return asUnscaledArray().getValue(itemIndex);
 		}
 
+		@Override
 		public Data.TimeValue[] getTimeValues() {
 			return asTimeArray().getTimeValues();
 		}
 
+		@Override
 		public Data.TimeValue getTimeValue(int itemIndex) {
 			return asTimeArray().getTimeValue(itemIndex);
 		}
 
+		@Override
 		public Data.TextValue[] getTextValues() {
 			return asTextArray().getTextValues();
 		}
 
+		@Override
 		public Data.TextValue getTextValue(int itemIndex) {
 			return asTextArray().getTextValue(itemIndex);
 		}
 
+		@Override
 		public Data.NumberValue[] getScaledValues() {
 			return asScaledArray().getValues();
 		}
 
+		@Override
 		public Data.NumberValue getScaledValue(int itemIndex) {
 			return asScaledArray().getValue(itemIndex);
 		}
 
+		@Override
 		public Data.ReferenceValue[] getReferenceValues() {
 			return asReferenceArray().getReferenceValues();
 		}
 
+		@Override
 		public Data.ReferenceValue getReferenceValue(int itemIndex) {
 			return asReferenceArray().getReferenceValue(itemIndex);
 		}
 
+		@Override
 		public Data.NumberArray asUnscaledArray() {
 			throw new UnsupportedOperationException("Attribut kann nicht in einem Zahlen-Array dargestellt werden");
 		}
 
+		@Override
 		public Data.TimeArray asTimeArray() {
 			throw new UnsupportedOperationException("Attribut kann nicht in einem Zeitwert-Array dargestellt werden");
 		}
 
+		@Override
 		public Data.TextArray asTextArray() {
 			throw new UnsupportedOperationException("Attribut kann nicht in einem Text-Array dargestellt werden");
 		}
 
+		@Override
 		public Data.NumberArray asScaledArray() {
 			throw new UnsupportedOperationException("Attribut kann nicht in einem Zahlen-Array dargestellt werden");
 		}
 
+		@Override
 		public Data.ReferenceArray asReferenceArray() {
 			throw new UnsupportedOperationException("Attribut kann nicht in einem Referenz-Array dargestellt werden");
 		}
 	}
 
-	/** Subklasse von <code>AbstarctData</code>, implementiert das Interface <code>Data.NumberArray</code>. */
+	/** Subklasse von <code>AbstractData</code>, implementiert das Interface <code>Data.NumberArray</code>. */
 	abstract public static class NumberArray implements Data.NumberArray {
 
+		@Override
 		public Data.NumberValue[] getValues() {
 			int length = getLength();
 			Data.NumberValue[] result = new Data.NumberValue[length];
@@ -899,30 +979,37 @@ public abstract class AbstractData implements Data {
 			return result;
 		}
 
+		@Override
 		public byte byteValue(int itemIndex) {
 			return getValue(itemIndex).byteValue();
 		}
 
+		@Override
 		public short shortValue(int itemIndex) {
 			return getValue(itemIndex).shortValue();
 		}
 
+		@Override
 		public int intValue(int itemIndex) {
 			return getValue(itemIndex).intValue();
 		}
 
+		@Override
 		public long longValue(int itemIndex) {
 			return getValue(itemIndex).longValue();
 		}
 
+		@Override
 		public float floatValue(int itemIndex) {
 			return getValue(itemIndex).floatValue();
 		}
 
+		@Override
 		public double doubleValue(int itemIndex) {
 			return getValue(itemIndex).doubleValue();
 		}
 
+		@Override
 		public byte[] getByteArray() {
 			int length = getLength();
 			byte[] result = new byte[length];
@@ -934,6 +1021,7 @@ public abstract class AbstractData implements Data {
 
 		abstract void setLengthUninitialized(int length);
 		
+		@Override
 		public void set(byte[] bytes) {
 			setLengthUninitialized(bytes.length);
 			for(int i = 0; i < bytes.length; ++i) {
@@ -941,6 +1029,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void set(short[] shorts) {
 			setLengthUninitialized(shorts.length);
 			for(int i = 0; i < shorts.length; ++i) {
@@ -948,6 +1037,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void set(int[] ints) {
 			setLengthUninitialized(ints.length);
 			for(int i = 0; i < ints.length; ++i) {
@@ -955,6 +1045,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void set(long[] longs) {
 			setLengthUninitialized(longs.length);
 			for(int i = 0; i < longs.length; ++i) {
@@ -962,6 +1053,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void set(float[] floats) {
 			setLengthUninitialized(floats.length);
 			for(int i = 0; i < floats.length; ++i) {
@@ -969,6 +1061,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public void set(double[] doubles) {
 			setLengthUninitialized(doubles.length);
 			for(int i = 0; i < doubles.length; ++i) {
@@ -976,6 +1069,7 @@ public abstract class AbstractData implements Data {
 			}
 		}
 
+		@Override
 		public short[] getShortArray() {
 			int length = getLength();
 			short[] result = new short[length];
@@ -985,6 +1079,7 @@ public abstract class AbstractData implements Data {
 			return result;
 		}
 
+		@Override
 		public int[] getIntArray() {
 			int length = getLength();
 			int[] result = new int[length];
@@ -994,6 +1089,7 @@ public abstract class AbstractData implements Data {
 			return result;
 		}
 
+		@Override
 		public long[] getLongArray() {
 			int length = getLength();
 			long[] result = new long[length];
@@ -1003,6 +1099,7 @@ public abstract class AbstractData implements Data {
 			return result;
 		}
 
+		@Override
 		public float[] getFloatArray() {
 			int length = getLength();
 			float[] result = new float[length];
@@ -1012,6 +1109,7 @@ public abstract class AbstractData implements Data {
 			return result;
 		}
 
+		@Override
 		public double[] getDoubleArray() {
 			int length = getLength();
 			double[] result = new double[length];

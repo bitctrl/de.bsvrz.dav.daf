@@ -307,11 +307,14 @@ public class ReceiveSubscriptionInfo {
 	}
 
 	/**
-	 * Gibt die Länge dieses Telegrams zurück
+	 * Gibt die Länge dieses Telegrams zurück.
 	 *
 	 * @return die Länge dieses Telegrams
 	 */
 	public int getLength() {
+		// Telegrammlänge ist fälschlicherweise 18, richtig wäre 22
+		// Telegrammlänge kann aus Kompatibilitätsgründen nicht geändert werden
+		
 		return 18;
 	}
 }

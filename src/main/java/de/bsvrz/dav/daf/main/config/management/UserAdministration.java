@@ -341,8 +341,8 @@ public interface UserAdministration {
 
 	/**
 	 * Fügt einem Benutzer eine Liste von Einmalpasswörtern hinzu. Die Einmalpasswörter werden in der Reihenfolge in der Konfiguration gespeichert, wie sie übergeben werden,
-	 * d.h. das Passwort mit dem Array-Index 0 enthält den nächsten freien Index, den diese Methode zurückgibt. Beispiel: Diese Methode gibt 9 zurück,
-	 * dann enthält das erste übergebene Passwort den Index 9, das zweite den Index 10 usw. Will sich der Benutzer später mit einem Einmalpasswort einloggen, muss er
+	 * d.h. das Passwort mit dem Array-Index 0 erhält von der Konfiguration den nächsten verfügbaren Index. Diesen gibt diese Methode zurück. Beispiel: Diese Methode gibt 9 zurück,
+	 * dann erhält das erste übergebene Passwort den Index 9, das zweite den Index 10 usw. Will sich der Benutzer später mit einem Einmalpasswort einloggen, muss er
 	 * den Passwort-Index mit einem Minus getrennt an seinen Benutzernamen anhängen, z.B. "Tester-19" für das Einmalpasswort mit Index 19 am Benutzer Tester.
 	 *
 	 * Damit dieser Auftrag ausgeführt werden kann, muss der Auftraggeber <code>orderer</code> die Rechte eines Administrators besitzen. Besitzt der Auftraggeber
@@ -365,7 +365,7 @@ public interface UserAdministration {
 	 *
 	 * @param orderer Auftraggeber
 	 * @param ordererPassword Passwort des Auftraggebers
-	 * @param username Benutzername für den Passwörter angelegt werden sollen
+	 * @param username Benutzername für den Passwörter abgefragt werden sollen
 	 * @throws de.bsvrz.dav.daf.main.config.ConfigurationTaskException Die Konfiguration kann den Auftrag nicht ausführen (z.B. Login-Daten falsch oder die Konfiguration unterstützt den Auftrag nicht und muss aktualisiert werden).
 	 * @return Indizes der noch verwendbaren Einmalpasswörter (leeres Array falls keine Passwörter mehr verfügbar sind), aufsteigend sortiert.
 	 */

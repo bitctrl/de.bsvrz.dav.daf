@@ -196,7 +196,7 @@ public abstract class UserLogin {
 	/** 
 	 * Gibt die ID des Benutzerobjekts zurück
 	 * @return die ID des Benutzerobjekts
-	 * @throws IllegalStateException Wenn Benutzer nicht authentifiziert oder er keine ID besitzt (Systembenutzer)
+	 * @throws IllegalStateException Wenn Benutzer nicht authentifiziert ist oder er keine ID besitzt (Systembenutzer)
 	 */
 	public abstract long getRemoteUserId();
 

@@ -88,11 +88,10 @@ public class AuthentificationTextAnswer extends DataTelegram {
 	}
 
 	public final void read(DataInputStream in) throws IOException {
-		int _length = in.readShort();
-		_text = in.readUTF();
-		length = _text.getBytes("UTF-8").length + 2;
-		if(length != _length) {
-			throw new IOException("Falsche Telegrammlänge");
-		}
+		int telegramLength = in.readShort();
+		in = DataTelegrams.getTelegramStream(in, telegramLength);
+		_text = DataTelegrams.checkAndReadUTF(in);
+		if(in.available() != 0) throw new IOException("Falsche Telegrammlänge (überflüssige Bytes)");
+		length=telegramLength;
 	}
 }

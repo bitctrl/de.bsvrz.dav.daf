@@ -1462,6 +1462,9 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 	 *         Kombination hat.
 	 */
 	public Data[] getConfigurationData(SystemObject[] objects, AttributeGroupUsage usage) {
+
+		Objects.requireNonNull(usage, "usage == null");
+		
 		Data[] result = new Data[objects.length];
 		ArrayList<Integer> originalPositions = new ArrayList<Integer>();
 		ArrayList<SystemObject> remoteObjects = new ArrayList<SystemObject>();
@@ -1574,6 +1577,12 @@ public class DafDataModel implements DataModel, UpdateDynamicObjects {
 	 */
 	Data getConfigurationData(SystemObject object, AttributeGroup atg) {
 		AttributeGroupUsage attributeGroupUsage = atg.getAttributeGroupUsage(_defaultConfigurationDataAspect);
+		
+		if(attributeGroupUsage == null){
+			// Attributgruppe besitzt keinen Aspekt asp.eigenschaften
+			return null;
+		}
+		
 		return getConfigurationData(object, attributeGroupUsage);
 	}
 

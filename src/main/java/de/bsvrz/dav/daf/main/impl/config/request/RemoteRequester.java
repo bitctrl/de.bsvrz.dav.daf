@@ -56,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 class RemoteRequester implements ConfigurationRequester {
 
 	private static final Debug _debug = Debug.getLogger();
-	
+
 	protected final DataModel _localConfiguration;
 	private final ConfigurationAuthority _configurationAuthority;
 
@@ -82,7 +82,7 @@ class RemoteRequester implements ConfigurationRequester {
 	protected final ClientDavInterface _connection;
 
 	private int _systemModelVersion;
-	
+
 	/** Implementierung der Benutzerverwaltung */
 	private UserAdministration _userAdministration;
 
@@ -112,7 +112,7 @@ class RemoteRequester implements ConfigurationRequester {
 			_senderWriteConfigObjects = new ConfigurationRequestWriteData(_connection, _configurationAuthority, localApplication);
 
 			_senderUserAdministration = new ConfigurationRequestUserAdministration(_connection, _configurationAuthority, localApplication);
-			
+
 			_senderConfigAreaTask = new ConfigurationRequestArea(_connection, _configurationAuthority, localApplication);
 
 			if(dataModel instanceof DafDataModel) {
@@ -131,13 +131,13 @@ class RemoteRequester implements ConfigurationRequester {
 			// Konstruktoren von "new ConfigurationRequestReadData" usw. Also hier nochmal prüfen, ob überhaupt verbunden.
 			if(dataModel instanceof DafDataModel) {
 				DafDataModel dafDataModel = (DafDataModel) dataModel;
-				// hier muss die Methode im DafDataModel benutzt werden, da beispielsweise 
+				// hier muss die Methode im DafDataModel benutzt werden, da beispielsweise
 				// ClientDavConnection.isConnected() == false u.U. erst zu spät gesetzt wird
 				if(dafDataModel.isConnectionClosed()) {
 					throw new CommunicationError("Datenverteilerverbindung verloren");
 				}
 			}
-			
+
 			try {
 				if(_connection.getClientDavParameters().getSimulationVariant() > 0) {
 					_debug.info("Initialisiere Kommunikation mit Konfiguration. (Blockiert bis Simulation in Zustand Vorstart wechselt.)");
@@ -993,7 +993,7 @@ class RemoteRequester implements ConfigurationRequester {
 
 
 	public BackupResult backupConfigurationFiles(String targetDirectory, final ConfigurationAuthority configurationAuthority, BackupProgressCallback callback)
-			throws ConfigurationTaskException, RequestException {	
+			throws ConfigurationTaskException, RequestException {
 		try {
 			return sendConfigAreaBackupTask(serializeBackupTask(targetDirectory, configurationAuthority), callback);
 		}

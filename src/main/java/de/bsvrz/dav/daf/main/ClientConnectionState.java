@@ -27,16 +27,45 @@
 package de.bsvrz.dav.daf.main;
 
 /**
- * Gibt einen Verbindungsstatus von Anmeldungen zurück
+ * Verbindungsstatus von Anmeldungen
+ * 
  * @author Kappich Systemberatung
  * @version $Revision: 0000 $
  */
 public enum ClientConnectionState {
+	/**
+	 * Die angemeldete Applikation ist lokal verbunden (normale Anmeldung an diesem Datenverteiler)
+	 */
 	FromLocalOk,
+	/**
+	 * Eine eingehende Anmeldung von einem anderen Datenverteiler. Dies entspricht vom Verhalten her
+	 * in vielen Punkten einer lokalen Anmeldung, d.h. der Datenverteiler meldet an den anfragenden Datenverteiler zurück,
+	 * ob eine Quelle/Senke verfügbar ist oder nicht.
+	 */
 	FromRemoteOk,
+	/**
+	 * Ausgehende Anmeldung an einen anderen potentiellen Zentraldatenverteiler, noch keine Rückmeldung
+	 */
 	ToRemoteWaiting,
+	/**
+	 * Ausgehende Anmeldung an einen anderen potentiellen Zentraldatenverteiler, positive Rückmeldung (anderer Datenverteiler
+	 * ist entweder der Zentraldatenverteiler oder dieser ist über ihn erreichbar).
+	 */
 	ToRemoteOk,
+	/**
+	 * Ausgehende Anmeldung an einen anderen potentiellen Zentraldatenverteiler, negative Rückmeldung da
+	 * anderer Datenverteiler keine Quelle/Senke für das Datum besitzt
+	 */
 	ToRemoteNotResponsible,
+	/**
+	 * Ausgehende Anmeldung an einen anderen potentiellen Zentraldatenverteiler, negative Rückmeldung da
+	 * keine Berechtigung vorliegt, die Daten zu empfangen oder zu senden
+	 */
 	ToRemoteNotAllowed,
+	/**
+	 * Ausgehende Anmeldung an einen anderen potentiellen Zentraldatenverteiler, negative Rückmeldung da
+	 * am anderen Datenverteiler mehrere potentielle Zentraldatenverteiler verbunden sind, von denen mehrere
+	 * eine positive Rückmeldung gegeben haben. Es gibt also mehrere Quellen oder Senken.
+	 */
 	ToRemoteMultiple
 }

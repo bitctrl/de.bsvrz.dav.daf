@@ -89,6 +89,9 @@ public class ReceiveSubscriptionTelegram extends DataTelegram {
 		int _length = in.readShort();
 		receiveSubscriptionInfo = new ReceiveSubscriptionInfo();
 		receiveSubscriptionInfo.read(in);
+		// Telegrammlänge ist fälschlicherweise 18, richtig wäre 22
+		// Telegrammlänge kann aus Kompatibilitätsgründen nicht geändert werden
+		
 		length = receiveSubscriptionInfo.getLength();
 		if(length != _length) {
 			throw new IOException("Falsche Telegrammlänge");

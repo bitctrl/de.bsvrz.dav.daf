@@ -138,12 +138,34 @@ public class RoutingUpdate {
 	 * @param in DataInputStrea
 	 *
 	 * @throws IOException, wenn beim Lesen vom Eingabe-Stream Fehler aufgetreten sind.
+	 * @deprecated Wird durch {@link #read(DataInputStream, int)} ersetzt.
 	 */
-	public final void read(DataInputStream in) throws IOException {
+	@Deprecated public final void read(DataInputStream in) throws IOException {
 		_transmitterId = in.readLong();
 		_transmitterWeight = in.readShort();
 		int size = in.readShort();
 		if(size > 0) {
+			_involvedTransmitters = new long[size];
+			for(int i = 0; i < size; ++i) {
+				_involvedTransmitters[i] = in.readLong();
+			}
+		}
+	}
+	/**
+	 * Liest ein Objekt aus dem gegebenen DataInputStream.
+	 *
+	 * @param in DataInputStream von dem die Telegrammdaten gelesen werden können
+	 * @param remaining  Verbleibende Anzahl Bytes im Telegramm; entspricht der maximalen Anzahl Bytes, die von in gelesen werden können
+	 *
+	 * @throws IOException, wenn beim Lesen vom Eingabe-Stream Fehler aufgetreten sind.
+	 */
+	public final void read(DataInputStream in, final int remaining) throws IOException {
+		if(remaining < 12) throw new IOException("Falsche Telegrammlänge (zu klein für weiteres RoutingUpdate");
+		_transmitterId = in.readLong();
+		_transmitterWeight = in.readShort();
+		int size = in.readShort();
+		if(size > 0) {
+			if(remaining - 12 < size * 8) throw new IOException("Falsche Telegrammlänge (zu klein für involvedTransmitters im RoutingUpdate");
 			_involvedTransmitters = new long[size];
 			for(int i = 0; i < size; ++i) {
 				_involvedTransmitters[i] = in.readLong();
@@ -159,4 +181,5 @@ public class RoutingUpdate {
 	public final int getLength() {
 		return 12 + (_involvedTransmitters == null ? 0 : _involvedTransmitters.length * 8);
 	}
+
 }
