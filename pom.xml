@@ -126,6 +126,7 @@
 			<version>${kernsoftware.version}</version>
 		</dependency>
 		<dependency>
+			<optional>true</optional>
 			<groupId>com.nimbusds</groupId>
 			<artifactId>srp6a</artifactId>
 			<version>2.0.0</version>
@@ -273,20 +274,29 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<minimizeJar>true</minimizeJar>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
 				<version>2.10</version>
 				<executions>
-					<execution>
-						<id>copy-internals</id>
-						<goals>
-							<goal>copy</goal>
-						</goals>
-						<phase>generate-resources</phase>
-						<configuration>
-						<artifact>com.nimbusds:srp6a:2.0.0</artifact>
-						<outputDirectory>${project.build.outputDirectory}</outputDirectory>
-						</configuration>
-					</execution>
+					<!-- <execution> <id>copy-internals</id> <goals> <goal>copy</goal> </goals> 
+						<phase>generate-resources</phase> <configuration> <artifact>com.nimbusds:srp6a:2.0.0</artifact> 
+						<outputDirectory>${project.build.outputDirectory}</outputDirectory> </configuration> 
+						</execution> -->
 					<execution>
 						<id>copy-dependencies</id>
 						<goals>

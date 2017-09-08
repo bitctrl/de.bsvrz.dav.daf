@@ -4,4 +4,3 @@
 -sources: true
 
 Bundle-Name: Datenverteiler-Applikationsfunktionen
-Bundle-ClassPath: srp6a-2.0.0.jar,.
